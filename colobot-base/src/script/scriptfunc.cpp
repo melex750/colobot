@@ -79,6 +79,16 @@ enum class CameraView
     BACK,
 };
 
+static bool HandleErrMode(Error err, int errMode, int& exception)
+{
+    if ( errMode == ERM_STOP )
+    {
+        exception = err;
+        return false;
+    }
+    return true;
+}
+
 CBotTypResult CScriptFunctions::cClassNull(CBotVar* thisclass, CBotVar* &var)
 {
     return cNull(var, nullptr);
@@ -434,12 +444,7 @@ bool CScriptFunctions::rDestroy(CBotVar* var, CBotVar* result, int& exception, v
     result->SetValInt(err); // indicates the error or ok
     if ( err != ERR_OK )
     {
-        if ( script->m_errMode == ERM_STOP )
-        {
-            exception = err;
-            return false;
-        }
-        return true;
+        return HandleErrMode(err, script->m_errMode, exception);
     }
 
     return true;
@@ -539,12 +544,7 @@ bool CScriptFunctions::rFactory(CBotVar* var, CBotVar* result, int& exception, v
     result->SetValInt(err); // indicates the error or ok
     if ( err != ERR_OK )
     {
-        if ( script->m_errMode == ERM_STOP )
-        {
-            exception = err;
-            return false;
-        }
-        return true;
+        return HandleErrMode(err, script->m_errMode, exception);
     }
 
     return true;
@@ -643,12 +643,7 @@ bool CScriptFunctions::rResearch(CBotVar* var, CBotVar* result, int& exception, 
     result->SetValInt(err); // indicates the error or ok
     if ( err != ERR_OK )
     {
-        if( script->m_errMode == ERM_STOP )
-        {
-            exception = err;
-            return false;
-        }
-        return true;
+        return HandleErrMode(err, script->m_errMode, exception);
     }
 
     return true;
@@ -694,12 +689,7 @@ bool CScriptFunctions::rTakeOff(CBotVar* var, CBotVar* result, int& exception, v
     result->SetValInt(err); // indicates the error or ok
     if ( err != ERR_OK )
     {
-        if ( script->m_errMode == ERM_STOP )
-        {
-            exception = err;
-            return false;
-        }
-        return true;
+        return HandleErrMode(err, script->m_errMode, exception);
     }
 
     return true;
@@ -1316,12 +1306,7 @@ bool CScriptFunctions::rDetect(CBotVar* var, CBotVar* result, int& exception, vo
         {
             script->m_taskExecutor->StopForegroundTask();
             result->SetValInt(err);  // shows the error
-            if ( script->m_errMode == ERM_STOP )
-            {
-                exception = err;
-                return false;
-            }
-            return true;
+            return HandleErrMode(err, script->m_errMode, exception);
         }
     }
     if ( !WaitForForegroundTask(script, result, exception) )  return false;  // not finished
@@ -1446,12 +1431,7 @@ bool CScriptFunctions::rBuild(CBotVar* var, CBotVar* result, int& exception, voi
     result->SetValInt(err); // indicates the error or ok
     if ( err != ERR_OK )
     {
-        if ( script->m_errMode == ERM_STOP )
-        {
-            exception = err;
-            return false;
-        }
-        return true;
+        return HandleErrMode(err, script->m_errMode, exception);
     }
 
     return WaitForForegroundTask(script, result, exception);
@@ -1500,12 +1480,7 @@ bool CScriptFunctions::rFlag(CBotVar* var, CBotVar* result, int& exception, void
         {
             script->m_taskExecutor->StopForegroundTask();
             result->SetValInt(err);  // shows the error
-            if ( script->m_errMode == ERM_STOP )
-            {
-                exception = err;
-                return false;
-            }
-            return true;
+            return HandleErrMode(err, script->m_errMode, exception);
         }
     }
     return WaitForForegroundTask(script, result, exception);
@@ -1543,12 +1518,7 @@ bool CScriptFunctions::rDeflag(CBotVar* var, CBotVar* result, int& exception, vo
         {
             script->m_taskExecutor->StopForegroundTask();
             result->SetValInt(err);  // shows the error
-            if ( script->m_errMode == ERM_STOP )
-            {
-                exception = err;
-                return false;
-            }
-            return true;
+            return HandleErrMode(err, script->m_errMode, exception);
         }
     }
     return WaitForForegroundTask(script, result, exception);
@@ -2020,12 +1990,7 @@ bool CScriptFunctions::rWait(CBotVar* var, CBotVar* result, int& exception, void
         {
             script->m_taskExecutor->StopForegroundTask();
             result->SetValInt(err);  // shows the error
-            if ( script->m_errMode == ERM_STOP )
-            {
-                exception = err;
-                return false;
-            }
-            return true;
+            return HandleErrMode(err, script->m_errMode, exception);
         }
     }
     return WaitForForegroundTask(script, result, exception);
@@ -2049,12 +2014,7 @@ bool CScriptFunctions::rMove(CBotVar* var, CBotVar* result, int& exception, void
         {
             script->m_taskExecutor->StopForegroundTask();
             result->SetValInt(err);  // shows the error
-            if ( script->m_errMode == ERM_STOP )
-            {
-                exception = err;
-                return false;
-            }
-            return true;
+            return HandleErrMode(err, script->m_errMode, exception);
         }
     }
     return WaitForForegroundTask(script, result, exception);
@@ -2078,12 +2038,7 @@ bool CScriptFunctions::rTurn(CBotVar* var, CBotVar* result, int& exception, void
         {
             script->m_taskExecutor->StopForegroundTask();
             result->SetValInt(err);  // shows the error
-            if ( script->m_errMode == ERM_STOP )
-            {
-                exception = err;
-                return false;
-            }
-            return true;
+            return HandleErrMode(err, script->m_errMode, exception);
         }
     }
     return WaitForForegroundTask(script, result, exception);
@@ -2158,12 +2113,7 @@ bool CScriptFunctions::rGoto(CBotVar* var, CBotVar* result, int& exception, void
         {
             script->m_taskExecutor->StopForegroundTask();
             result->SetValInt(err);  // shows the error
-            if ( script->m_errMode == ERM_STOP )
-            {
-                exception = err;
-                return false;
-            }
-            return true;
+            return HandleErrMode(err, script->m_errMode, exception);
         }
     }
     return WaitForForegroundTask(script, result, exception);
@@ -2218,12 +2168,7 @@ bool CScriptFunctions::rGrab(CBotVar* var, CBotVar* result, int& exception, void
         {
             script->m_taskExecutor->StopForegroundTask();
             result->SetValInt(err);  // shows the error
-            if ( script->m_errMode == ERM_STOP )
-            {
-                exception = err;
-                return false;
-            }
-            return true;
+            return HandleErrMode(err, script->m_errMode, exception);
         }
     }
     return WaitForForegroundTask(script, result, exception);
@@ -2261,12 +2206,7 @@ bool CScriptFunctions::rDrop(CBotVar* var, CBotVar* result, int& exception, void
         {
             script->m_taskExecutor->StopForegroundTask();
             result->SetValInt(err);  // shows the error
-            if ( script->m_errMode == ERM_STOP )
-            {
-                exception = err;
-                return false;
-            }
-            return true;
+            return HandleErrMode(err, script->m_errMode, exception);
         }
     }
     return WaitForForegroundTask(script, result, exception);
@@ -2413,12 +2353,7 @@ bool CScriptFunctions::rSend(CBotVar* var, CBotVar* result, int& exception, void
         {
             script->m_taskExecutor->StopForegroundTask();
             result->SetValInt(err);  // shows the error
-            if ( script->m_errMode == ERM_STOP )
-            {
-                exception = err;
-                return false;
-            }
-            return true;
+            return HandleErrMode(err, script->m_errMode, exception);
         }
     }
     return WaitForForegroundTask(script, result, exception);
@@ -2539,12 +2474,7 @@ bool CScriptFunctions::rThump(CBotVar* var, CBotVar* result, int& exception, voi
         {
             script->m_taskExecutor->StopForegroundTask();
             result->SetValInt(err);  // shows the error
-            if ( script->m_errMode == ERM_STOP )
-            {
-                exception = err;
-                return false;
-            }
-            return true;
+            return HandleErrMode(err, script->m_errMode, exception);
         }
     }
     return WaitForForegroundTask(script, result, exception);
@@ -2566,12 +2496,7 @@ bool CScriptFunctions::rRecycle(CBotVar* var, CBotVar* result, int& exception, v
         {
             script->m_taskExecutor->StopForegroundTask();
             result->SetValInt(err);  // shows the error
-            if ( script->m_errMode == ERM_STOP )
-            {
-                exception = err;
-                return false;
-            }
-            return true;
+            return HandleErrMode(err, script->m_errMode, exception);
         }
     }
     return WaitForForegroundTask(script, result, exception);
@@ -2607,12 +2532,7 @@ bool CScriptFunctions::rShield(CBotVar* var, CBotVar* result, int& exception, vo
     if (pThis->GetType() != OBJECT_MOBILErs)
     {
         result->SetValInt(ERR_WRONG_BOT);  // return error
-        if (script->m_errMode == ERM_STOP)
-        {
-            exception = ERR_WRONG_BOT;
-            return false;
-        }
-        return true;
+        return HandleErrMode(ERR_WRONG_BOT, script->m_errMode, exception);
     }
 
     oper = var->GetValFloat();  // 0=down, 1=up
@@ -2728,12 +2648,7 @@ bool CScriptFunctions::rFire(CBotVar* var, CBotVar* result, int& exception, void
         if ( err != ERR_OK )
         {
             script->m_taskExecutor->StopForegroundTask();
-            if ( script->m_errMode == ERM_STOP )
-            {
-                exception = err;
-                return false;
-            }
-            return true;
+            return HandleErrMode(err, script->m_errMode, exception);
         }
     }
     return WaitForForegroundTask(script, result, exception);
@@ -3023,12 +2938,7 @@ bool CScriptFunctions::rPenDown(CBotVar* var, CBotVar* result, int& exception, v
     if (!pThis->Implements(ObjectInterfaceType::TraceDrawing))
     {
         result->SetValInt(ERR_WRONG_OBJ);
-        if ( script->m_errMode == ERM_STOP )
-        {
-            exception = ERR_WRONG_OBJ;
-            return false;
-        }
-        return true;
+        return HandleErrMode(ERR_WRONG_OBJ, script->m_errMode, exception);
     }
 
     CTraceDrawingObject* traceDrawing = dynamic_cast<CTraceDrawingObject*>(pThis);
@@ -3062,12 +2972,7 @@ bool CScriptFunctions::rPenDown(CBotVar* var, CBotVar* result, int& exception, v
             {
                 script->m_taskExecutor->StopForegroundTask();
                 result->SetValInt(err);  // shows the error
-                if ( script->m_errMode == ERM_STOP )
-                {
-                    exception = err;
-                    return false;
-                }
-                return true;
+                return HandleErrMode(err, script->m_errMode, exception);
             }
         }
         return WaitForForegroundTask(script, result, exception);
@@ -3091,12 +2996,7 @@ bool CScriptFunctions::rPenUp(CBotVar* var, CBotVar* result, int& exception, voi
     if (!pThis->Implements(ObjectInterfaceType::TraceDrawing))
     {
         result->SetValInt(ERR_WRONG_OBJ);
-        if ( script->m_errMode == ERM_STOP )
-        {
-            exception = ERR_WRONG_OBJ;
-            return false;
-        }
-        return true;
+        return HandleErrMode(ERR_WRONG_OBJ, script->m_errMode, exception);
     }
 
     CTraceDrawingObject* traceDrawing = dynamic_cast<CTraceDrawingObject*>(pThis);
@@ -3111,12 +3011,7 @@ bool CScriptFunctions::rPenUp(CBotVar* var, CBotVar* result, int& exception, voi
             {
                 script->m_taskExecutor->StopForegroundTask();
                 result->SetValInt(err);  // shows the error
-                if ( script->m_errMode == ERM_STOP )
-                {
-                    exception = err;
-                    return false;
-                }
-                return true;
+                return HandleErrMode(err, script->m_errMode, exception);
             }
         }
         return WaitForForegroundTask(script, result, exception);
@@ -3141,12 +3036,7 @@ bool CScriptFunctions::rPenColor(CBotVar* var, CBotVar* result, int& exception, 
     if (!pThis->Implements(ObjectInterfaceType::TraceDrawing))
     {
         result->SetValInt(ERR_WRONG_OBJ);
-        if ( script->m_errMode == ERM_STOP )
-        {
-            exception = ERR_WRONG_OBJ;
-            return false;
-        }
-        return true;
+        return HandleErrMode(ERR_WRONG_OBJ, script->m_errMode, exception);
     }
 
     CTraceDrawingObject* traceDrawing = dynamic_cast<CTraceDrawingObject*>(pThis);
@@ -3165,12 +3055,7 @@ bool CScriptFunctions::rPenColor(CBotVar* var, CBotVar* result, int& exception, 
             {
                 script->m_taskExecutor->StopForegroundTask();
                 result->SetValInt(err);  // shows the error
-                if ( script->m_errMode == ERM_STOP )
-                {
-                    exception = err;
-                    return false;
-                }
-                return true;
+                return HandleErrMode(err, script->m_errMode, exception);
             }
         }
         return WaitForForegroundTask(script, result, exception);
@@ -3194,12 +3079,7 @@ bool CScriptFunctions::rPenWidth(CBotVar* var, CBotVar* result, int& exception, 
     if (!pThis->Implements(ObjectInterfaceType::TraceDrawing))
     {
         result->SetValInt(ERR_WRONG_OBJ);
-        if ( script->m_errMode == ERM_STOP )
-        {
-            exception = ERR_WRONG_OBJ;
-            return false;
-        }
-        return true;
+        return HandleErrMode(ERR_WRONG_OBJ, script->m_errMode, exception);
     }
 
     CTraceDrawingObject* traceDrawing = dynamic_cast<CTraceDrawingObject*>(pThis);
