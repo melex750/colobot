@@ -77,8 +77,7 @@ public:
     void FreeLock(CBotProgram* prog) const;
 
     bool WriteStaticState(std::ostream& ostr) const;
-
-    static bool ReadStaticState(std::istream& istr, CBotContext& context);
+    bool ReadStaticState(std::istream& istr);
 
     long FindInstance(CBotVar* var) const;
     CBotVar* FindInstance(long pos) const;

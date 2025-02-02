@@ -4907,7 +4907,7 @@ CObject* CRobotMain::IOReadScene(const std::filesystem::path& filename,
                     }
                 }
 
-                if (!bError && (bError = !CBot::CBotContext::ReadStaticState(istr, *m_globalCBotContext)))
+                if (!bError && (bError = !m_globalCBotContext->ReadStaticState(istr)))
                 {
                     GetLogger()->Error("global cbot context read static state failed");
                 }
@@ -4924,7 +4924,7 @@ CObject* CRobotMain::IOReadScene(const std::filesystem::path& filename,
                         if ((bError = !CBot::ReadInt(istr, team))) break;
                         auto teamContext = GetCBotContextForTeam(team);
 
-                        bError = !CBot::CBotContext::ReadStaticState(istr, *teamContext);
+                        bError = !teamContext->ReadStaticState(istr);
                     }
                     if (bError) GetLogger()->Error("team cbot context read static state failed");
                 }
