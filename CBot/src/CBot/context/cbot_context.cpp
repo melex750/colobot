@@ -69,11 +69,20 @@ CBotContext::~CBotContext()
 void CBotContext::ClearInstanceList()
 {
     m_globalData->m_instances.clear();
+    m_globalData->m_next = 1;
 }
 
-void CBotContext::DeclareInstance(long pos, CBotVar* var)
+int CBotContext::DeclareInstance(CBotVar* var)
 {
-    m_globalData->m_instances[pos] = var;
+    int id = m_globalData->m_next++;
+    m_globalData->m_instances[id] = var;
+    return id;
+}
+
+void CBotContext::DeclareInstance(int id, CBotVar* var)
+{
+    assert(m_globalData->m_next == 1);
+    m_globalData->m_instances[id] = var;
 }
 
 CBotClass* CBotContext::FindClass(const std::string& name) const
@@ -138,14 +147,14 @@ bool CBotContext::ReadStaticState(std::istream& istr, CBotContext& context)
     return true;
 }
 
-CBotVar* CBotContext::FindInstance(long pos) const
+CBotVar* CBotContext::FindInstance(int pos) const
 {
     auto it = m_globalData->m_instances.find(pos);
     if (it != m_globalData->m_instances.end()) return it->second;
     return nullptr;
 }
 
-long CBotContext::FindInstance(CBotVar* var) const
+int CBotContext::FindInstance(CBotVar* var) const
 {
     for (const auto& item : m_globalData->m_instances)
         if (item.second == var) return item.first;

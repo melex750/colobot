@@ -901,11 +901,13 @@ bool CBotVar::RestoreVar(std::istream &istr, CBotVarUPtr& outVar, CBotContext& c
             isClass = true;
         case CBotTypArrayBody:
             {
-                long pos;
-                if (!ReadLong(istr, pos)) return false;
-                if ( pos != 0 )
+                int isExisting;
+                if (!ReadInt(istr, isExisting)) return false;
+                if (isExisting != 0)
                 {
-                    CBotVar* pInstance = context.FindInstance(pos);
+                    int id;
+                    if (!ReadInt(istr, id)) return false;
+                    CBotVar* pInstance = context.FindInstance(id);
                     if (pInstance == nullptr)
                     {
                         assert(false);
@@ -915,28 +917,27 @@ bool CBotVar::RestoreVar(std::istream &istr, CBotVarUPtr& outVar, CBotContext& c
                     break;
                 }
 
-                pos = istr.tellg();
+                int id;
+                if (!ReadInt(istr, id)) return false;
                 CBotTypResult    r;
                 if (!ReadType(istr, r, context)) return false;      // complete type
+
+                pNew = new CBotVarClass(token, r);                // directly creates an instance
+                auto pClass = r.GetClass();
+                if (pClass == nullptr || !pClass->IsIntrinsic())
                 {
-                    pNew = new CBotVarClass(token, r);                // directly creates an instance
-                                                                    // attention cptuse = 0
-                    auto pClass = r.GetClass();
-                    if (pClass == nullptr || !pClass->IsIntrinsic())
-                    {
-                        context.DeclareInstance(pos, pNew);
-                    }
+                    context.DeclareInstance(id, pNew);
+                }
 
-                    if (!ReadVarListFromArray(istr, (static_cast<CBotVarClass*>(pNew))->m_pVar, context)) return false;
+                if (!ReadVarListFromArray(istr, (static_cast<CBotVarClass*>(pNew))->m_pVar, context)) return false;
 
-                    if (isClass) // read id for each item in this instance
+                if (isClass) // read id for each item in this instance
+                {
+                    CBotVar* pVars = (static_cast<CBotVarClass*>(pNew))->m_pVar;
+                    while (pVars != nullptr)
                     {
-                        CBotVar* pVars = (static_cast<CBotVarClass*>(pNew))->m_pVar;
-                        while (pVars != nullptr)
-                        {
-                            if (!ReadLong(istr, pVars->m_ident)) return false;
-                            pVars = pVars->m_next;
-                        }
+                        if (!ReadLong(istr, pVars->m_ident)) return false;
+                        pVars = pVars->m_next;
                     }
                 }
             }
