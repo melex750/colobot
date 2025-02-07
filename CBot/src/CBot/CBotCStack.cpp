@@ -21,12 +21,14 @@
 #include "CBot/CBotCStack.h"
 
 #include "CBot/CBotClass.h"
+#include "CBot/CBotProgram.h"
 #include "CBot/CBotToken.h"
-#include "CBot/CBotExternalCall.h"
 
 #include "CBot/CBotVar/CBotVar.h"
 
 #include "CBot/CBotInstr/CBotFunction.h"
+
+#include "CBot/context/cbot_context.h"
 
 namespace CBot
 {
@@ -40,7 +42,14 @@ struct CBotCStack::Data
     int           errEnd = 0;
     //! The return type of the function currently being compiled
     CBotTypResult retTyp = CBotTypResult(CBotTypVoid);
+
+    CBotContext* context = nullptr;
 };
+
+CBotContext* CBotCStack::GetContext() const
+{
+    return m_data->context;
+}
 
 CBotCStack::CBotCStack(CBotCStack* ppapa)
 {
@@ -250,6 +259,7 @@ bool CBotCStack::NextToken(CBotToken* &p)
 void CBotCStack::SetProgram(CBotProgram* p)
 {
     m_data->prog = p;
+    m_data->context = p->GetContext().get();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -371,7 +381,7 @@ CBotTypResult CBotCStack::CompileCall(CBotToken* &p, CBotVar** ppVars, long& nId
     nIdent = 0;
     CBotTypResult val(-1);
 
-    val = GetProgram()->GetExternalCalls()->CompileCall(p, nullptr, ppVars, this);
+    val = GetContext()->CompileCall(p, nullptr, ppVars, this);
     if (val.GetType() < 0)
     {
         val = CBotFunction::CompileCall(p->GetString(), ppVars, nIdent, GetProgram());
@@ -391,7 +401,7 @@ bool CBotCStack::CheckCall(CBotToken* &pToken, CBotDefParam* pParam, const std::
 {
     const auto& name = pToken->GetString();
 
-    if ( GetProgram()->GetExternalCalls()->CheckCall(name) ) return true;
+    if ( GetContext()->CheckCall(name) ) return true;
 
     for (CBotFunction* pp : GetProgram()->GetFunctions())
     {
@@ -406,7 +416,7 @@ bool CBotCStack::CheckCall(CBotToken* &pToken, CBotDefParam* pParam, const std::
         }
     }
 
-    for (CBotFunction* pp : CBotFunction::m_publicFunctions)
+    for (CBotFunction* pp : GetContext()->GetPublicFunctions())
     {
         if ( name == pp->GetName() )
         {
@@ -420,6 +430,11 @@ bool CBotCStack::CheckCall(CBotToken* &pToken, CBotDefParam* pParam, const std::
     }
 
     return false;
+}
+
+CBotClass* CBotCStack::FindClass(const std::string& name) const
+{
+    return GetContext()->FindClass(name);
 }
 
 } // namespace CBot

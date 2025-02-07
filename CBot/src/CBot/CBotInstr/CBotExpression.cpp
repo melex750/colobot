@@ -193,7 +193,7 @@ bool CBotExpression::Execute(CBotStack* &pj)
             if (var->GetType() == CBotTypString && value->GetType() != CBotTypString)
             {
                 CBotVar* newVal = CBotVar::Create("", var->GetTypResult());
-                value->Update(pj->GetUserPtr());
+                value->Update();
                 newVal->SetValString(value->GetValString());
                 pile2->SetVar(newVal);
             }

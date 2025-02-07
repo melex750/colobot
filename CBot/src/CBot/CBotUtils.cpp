@@ -58,8 +58,6 @@ CBotVar* MakeListVars(CBotVar** ppVars, bool bSetVal)
 ////////////////////////////////////////////////////////////////////////////////
 CBotTypResult TypeParam(CBotToken* &p, CBotCStack* pile)
 {
-    CBotClass*  pClass = nullptr;
-
     switch (p->GetType())
     {
     case ID_BYTE:
@@ -95,7 +93,7 @@ CBotTypResult TypeParam(CBotToken* &p, CBotCStack* pile)
         return CBotTypResult( 0 );
 
     case TokenTypVar:
-        pClass = CBotClass::Find(p);
+        auto pClass = pile->FindClass(p->GetString());
         if ( pClass != nullptr)
         {
             p = p->GetNext();

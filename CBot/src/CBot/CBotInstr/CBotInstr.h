@@ -27,6 +27,7 @@
 namespace CBot
 {
 class CBotDebug;
+class CBotStack;
 
 /**
  * \brief Class for one CBot instruction

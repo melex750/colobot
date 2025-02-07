@@ -17,6 +17,8 @@
  * along with this program. If not, see http://gnu.org/licenses
  */
 
+#include "CBot/CBotProgram.h"
+
 #include "CBot/CBotVar/CBotVar.h"
 
 #include "CBot/CBotExternalCall.h"
@@ -27,6 +29,8 @@
 
 #include "CBot/CBotInstr/CBotFunction.h"
 
+#include "CBot/context/cbot_context.h"
+
 #include "CBot/stdlib/stdlib.h"
 
 #include <algorithm>
@@ -34,14 +38,14 @@
 namespace CBot
 {
 
-std::unique_ptr<CBotExternalCallList> CBotProgram::m_externalCalls;
-
-CBotProgram::CBotProgram()
+CBotProgram::CBotProgram(const CBotContextSPtr& context) :
+    CBotContextOwner(context)
 {
 }
 
-CBotProgram::CBotProgram(CBotVar* thisVar)
-: m_thisVar(thisVar)
+CBotProgram::CBotProgram(const CBotContextSPtr& context, CBotVar* thisVar) :
+    CBotContextOwner(context),
+    m_thisVar(thisVar)
 {
 }
 
@@ -52,7 +56,7 @@ CBotProgram::~CBotProgram()
         c->Purge();
     m_classes.clear();
 
-    CBotClass::FreeLock(this);
+    m_context->FreeLock(this);
 
     for (CBotFunction* f : m_functions) delete f;
     m_functions.clear();
@@ -75,14 +79,14 @@ bool CBotProgram::Compile(const std::string& program, std::vector<std::string>& 
     m_error = CBotNoErr;
 
     // Step 1. Process the code into tokens
-    auto tokens = CBotToken::CompileTokens(program);
+    auto tokens = CBotToken::CompileTokens(program, *m_context);
     if (tokens == nullptr) return false;
 
     auto pStack = std::unique_ptr<CBotCStack>(new CBotCStack(nullptr));
     CBotToken* p = tokens.get()->GetNext();                 // skips the first token (separator)
 
     pStack->SetProgram(this);                               // defined used routines
-    m_externalCalls->SetUserPtr(pUser);
+    m_context->SetUserPtr(pUser);
 
     // Step 2. Find all function and class definitions
     while ( pStack->IsOk() && p != nullptr && p->GetType() != 0)
@@ -94,7 +98,9 @@ bool CBotProgram::Compile(const std::string& program, std::vector<std::string>& 
         {
             CBotClass* newclass = CBotClass::Compile1(p, pStack.get());
             if (newclass != nullptr)
+            {
                 m_classes.push_back(newclass);
+            }
         }
         else
         {
@@ -131,7 +137,11 @@ bool CBotProgram::Compile(const std::string& program, std::vector<std::string>& 
         {
             CBotFunction::Compile(p, pStack.get(), *next);
             if ((*next)->IsExtern()) externFunctions.push_back((*next)->GetName()/* + next->GetParams()*/);
-            if ((*next)->IsPublic()) CBotFunction::AddPublic(*next);
+            if ((*next)->IsPublic())
+            {
+                (*next)->m_context = m_context;
+                m_context->AddPublicFunction(*next);
+            }
             (*next)->m_pProg = this;                           // keeps pointers to the module
             ++next;
         }
@@ -159,7 +169,7 @@ bool CBotProgram::Start(const std::string& name)
     }
     m_entryPoint = *it;
 
-    m_stack = CBotStack::AllocateStack();
+    m_stack = CBotStack::AllocateStack(m_context.get());
     m_stack->SetProgram(this);
 
     return true; // we are ready for Run()
@@ -204,7 +214,7 @@ bool CBotProgram::Run(void* pUser, int timer)
         m_error = m_stack->GetError(m_errorStart, m_errorEnd);
         m_stack->Delete();
         m_stack = nullptr;
-        CBotClass::FreeLock(this);
+        m_context->FreeLock(this);
         m_entryPoint = nullptr;
         return true;                                // execution is finished!
     }
@@ -220,7 +230,7 @@ void CBotProgram::Stop()
         m_stack = nullptr;
     }
     m_entryPoint = nullptr;
-    CBotClass::FreeLock(this);
+    m_context->FreeLock(this);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -283,47 +293,6 @@ bool CBotProgram::ClassExists(std::string name)
     return false;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-static CBotTypResult cSizeOf( CBotVar* &pVar, void* pUser )
-{
-    if ( pVar == nullptr ) return CBotTypResult( CBotErrLowParam );
-    if ( pVar->GetType() != CBotTypArrayPointer )
-                        return CBotTypResult( CBotErrBadParam );
-    return CBotTypResult( CBotTypInt );
-}
-
-static bool rSizeOf( CBotVar* pVar, CBotVar* pResult, int& ex, void* pUser )
-{
-    if ( pVar == nullptr ) { ex = CBotErrLowParam; return true; }
-
-    int i = 0;
-    pVar = pVar->GetItemList();
-
-    while ( pVar != nullptr )
-    {
-        i++;
-        pVar = pVar->GetNext();
-    }
-
-    pResult->SetValInt(i);
-    return true;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool CBotProgram::AddFunction(const std::string& name,
-                              bool rExec(CBotVar* pVar, CBotVar* pResult, int& Exception, void* pUser),
-                              CBotTypResult rCompile(CBotVar*& pVar, void* pUser))
-{
-    return m_externalCalls->AddFunction(name, std::unique_ptr<CBotExternalCall>(new CBotExternalCallDefault(rExec, rCompile)));
-}
-
-bool CBotProgram::DefineNum(const std::string& name, long val)
-{
-    CBotToken::DefineNum(name, val);
-    return true;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 bool CBotProgram::SaveState(std::ostream &ostr)
 {
     if (!WriteLong(ostr, CBOTVERSION)) return false;
@@ -369,7 +338,7 @@ bool CBotProgram::RestoreState(std::istream &istr)
     {
         m_stack->Delete();
         m_stack = nullptr;
-        m_stack = CBotStack::AllocateStack(); // start from the top
+        m_stack = CBotStack::AllocateStack(m_context.get()); // start from the top
         m_stack->SetProgram(this);
         return false; // signal error
     }
@@ -384,43 +353,6 @@ bool CBotProgram::RestoreState(std::istream &istr)
 int CBotProgram::GetVersion()
 {
     return  CBOTVERSION;
-}
-
-void CBotProgram::Init()
-{
-    m_externalCalls.reset(new CBotExternalCallList);
-
-    CBotProgram::DefineNum("CBotErrZeroDiv",    CBotErrZeroDiv);     // division by zero
-    CBotProgram::DefineNum("CBotErrNotInit",    CBotErrNotInit);     // uninitialized variable
-    CBotProgram::DefineNum("CBotErrBadThrow",   CBotErrBadThrow);    // throw a negative value
-    CBotProgram::DefineNum("CBotErrNoRetVal",   CBotErrNoRetVal);    // function did not return results
-    CBotProgram::DefineNum("CBotErrNoRun",      CBotErrNoRun);       // active Run () without a function // TODO: Is this actually a runtime error?
-    CBotProgram::DefineNum("CBotErrUndefFunc",  CBotErrUndefFunc);   // Calling a function that no longer exists
-    CBotProgram::DefineNum("CBotErrNotClass",   CBotErrNotClass);    // Class no longer exists
-    CBotProgram::DefineNum("CBotErrNull",       CBotErrNull);        // Attempted to use a null pointer
-    CBotProgram::DefineNum("CBotErrNan",        CBotErrNan);         // Can't do operations on nan
-    CBotProgram::DefineNum("CBotErrOutArray",   CBotErrOutArray);    // Attempted access out of bounds of an array
-    CBotProgram::DefineNum("CBotErrStackOver",  CBotErrStackOver);   // Stack overflow
-    CBotProgram::DefineNum("CBotErrDeletedPtr", CBotErrDeletedPtr);  // Attempted to use deleted object
-
-    CBotProgram::AddFunction("sizeof", rSizeOf, cSizeOf);
-
-    InitStringFunctions();
-    InitMathFunctions();
-    InitFileFunctions();
-}
-
-void CBotProgram::Free()
-{
-    CBotToken::ClearDefineNum();
-    m_externalCalls->Clear();
-    CBotClass::ClearPublic();
-    m_externalCalls.reset();
-}
-
-const std::unique_ptr<CBotExternalCallList>& CBotProgram::GetExternalCalls()
-{
-    return m_externalCalls;
 }
 
 } // namespace CBot

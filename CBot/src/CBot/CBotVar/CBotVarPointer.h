@@ -49,28 +49,24 @@ public:
     CBotVar* GetItemList() override;
     std::string GetValString() const override;
 
-    void SetPointer(CBotVar* p) override;
-    CBotVarClass* GetPointer() override;
-
-    void SetIdent(long n) override;
-    /**
-     * \brief Returns the unique instance identifier
-     * \see SetIdent()
-     */
-    long GetIdent();
+    void SetPointer(const CBotVarSPtr& p) override;
+    CBotVarSPtr GetPointer() override;
+    bool PointerIsUnique() const override;
 
     void ConstructorSet() override;
 
-    bool Save1State(std::ostream &ostr) override;
+    bool Save1State(std::ostream &ostr, CBotContext& context) override;
 
-    void Update(void* pUser) override;
+    void Update() override;
+    void SetUserPointer(std::unique_ptr<CBotUserPointer> user) override;
+    const std::unique_ptr<CBotUserPointer>& GetUserPointer() override;
 
     bool Eq(CBotVar* left, CBotVar* right) override;
     bool Ne(CBotVar* left, CBotVar* right) override;
 
 private:
     //! Class pointed to
-    CBotVarClass* m_pVarClass;
+    CBotVarSPtr m_pVarClass;
     //! Class type
     CBotClass* m_pClass;
     friend class CBotVar;

@@ -64,11 +64,11 @@ CBotInstr* CBotDefClass::Compile(CBotToken* &p, CBotCStack* pStack, CBotClass* p
     if ( pClass == nullptr )
     {
         pStack->SetStartError(p->GetStart());
-        pClass = CBotClass::Find(p);
+        pClass = pStack->FindClass(p->GetString());
         if ( pClass == nullptr )
         {
             // not found? is bizare
-            pStack->SetError(CBotErrNotClass, p);
+            pStack->SetError(CBotErrNoClassName, p);
             return nullptr;
         }
         p = p->GetNext();
@@ -195,12 +195,11 @@ CBotInstr* CBotDefClass::Compile(CBotToken* &p, CBotCStack* pStack, CBotClass* p
                 pStk->SetError(CBotErrBadType1, p->GetStart());
                 goto error;
             }
-//          if ( !bIntrinsic ) var->SetPointer(pStk->GetVar()->GetPointer());
             if ( !bIntrinsic )
             {
                 // does not use the result on the stack, to impose the class
                 CBotVar* pvar = CBotVar::Create("", pClass);
-                var->SetPointer( pvar );                    // variable already declared instance pointer
+                var->SetPointer( pvar->GetPointer() );      // variable already declared instance pointer
                 delete pvar;                                // removes the second pointer
             }
             var->SetInit(CBotVar::InitType::DEF);                         // marks the pointer as init
@@ -212,7 +211,7 @@ CBotInstr* CBotDefClass::Compile(CBotToken* &p, CBotCStack* pStack, CBotClass* p
             if ( !bIntrinsic )
             {
                 CBotVar* pvar = CBotVar::Create("", pClass);
-                var->SetPointer( pvar );                    // variable already declared instance pointer
+                var->SetPointer( pvar->GetPointer() );      // variable already declared instance pointer
                 delete pvar;                                // removes the second pointer
             }
             var->SetInit(CBotVar::InitType::IS_POINTER);                            // marks the pointer as init
@@ -260,8 +259,7 @@ bool CBotDefClass::Execute(CBotStack* &pj)
         }
     }
 
-    CBotToken*  pt = &m_token;
-    CBotClass*  pClass = CBotClass::Find(pt);
+    auto pClass = pile->FindClass(m_token.GetString());
 
     bool bIntrincic = pClass->IsIntrinsic();
 
@@ -301,7 +299,7 @@ bool CBotDefClass::Execute(CBotStack* &pj)
 
             if ( bIntrincic )
             {
-                if ( pv == nullptr || pv->GetPointer() == nullptr )
+                if ( pv == nullptr )
                 {
                     pile->SetError(CBotErrNull, &m_token);
                     return pj->Return(pile);
@@ -319,10 +317,8 @@ bool CBotDefClass::Execute(CBotStack* &pj)
                     }
                 }
 
-                CBotVarClass* pInstance;
-                pInstance = pv->GetPointer();    // value for the assignment
                 CBotTypResult type = pThis->GetTypResult();
-                pThis->SetPointer(pInstance);
+                pThis->SetPointer( pv->GetPointer() );
                 pThis->SetType(type);        // keep pointer type
             }
             pThis->SetInit(CBotVar::InitType::DEF);
@@ -334,15 +330,12 @@ bool CBotDefClass::Execute(CBotStack* &pj)
 
             if ( !bIntrincic && pile->GetState() == 1)
             {
-                CBotToken*  pt = &m_token;
-                CBotClass* pClass = CBotClass::Find(pt);
+                auto pClass = pile->FindClass(m_token.GetString());
 
                 // creates an instance of the requested class
 
-                CBotVarClass* pInstance;
-                pInstance = static_cast<CBotVarClass*>(CBotVar::Create("", pClass));
-                pThis->SetPointer(pInstance);
-                delete pInstance;
+                CBotVarUPtr pInstance{CBotVar::Create("", pClass)};
+                pThis->SetPointer( pInstance->GetPointer() );
 
                 pile->IncState();
             }
@@ -430,8 +423,7 @@ void CBotDefClass::RestoreState(CBotStack* &pj, bool bMain)
         }
     }
 
-    CBotToken*  pt = &m_token;
-    CBotClass*  pClass = CBotClass::Find(pt);
+    auto pClass = pile->FindClass(m_token.GetString());
     bool bIntrincic = pClass->IsIntrinsic();
 
     if ( bMain && pile->GetState()<3)
@@ -483,7 +475,7 @@ void CBotDefClass::RestoreState(CBotStack* &pj, bool bMain)
             ppVars[i] = nullptr;
 
             // creates a variable for the result
-            pClass->RestoreMethode(m_nMethodeIdent, pt, pThis, ppVars, pile2);
+            pClass->RestoreMethode(m_nMethodeIdent, &m_token, pThis, ppVars, pile2);
             return;
         }
     }

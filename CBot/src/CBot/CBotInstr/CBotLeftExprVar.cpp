@@ -66,7 +66,7 @@ bool CBotLeftExprVar::Execute(CBotStack* &pj)
     {
         if (m_typevar.Eq(CBotTypString) && var2->GetType() != CBotTypString)
         {
-            var2->Update(pj->GetUserPtr());
+            var2->Update();
             var1->SetValString(var2->GetValString());
             return true;
         }

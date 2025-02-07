@@ -19,6 +19,8 @@
 
 #include "CBot/CBotToken.h"
 
+#include "CBot/context/cbot_context.h"
+
 #include <cstdarg>
 #include <cassert>
 #include <unordered_map>
@@ -134,9 +136,6 @@ const std::string& UndefinedTokenString()
     return TX_UNDEF_VALUE;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-std::map<std::string, long> CBotToken::m_defineNum;
-////////////////////////////////////////////////////////////////////////////////
 CBotToken::CBotToken()
 {
 }
@@ -169,13 +168,6 @@ CBotToken::~CBotToken()
 {
 }
 
-////////////////////////////////////////////////////////////////////////////////
-void CBotToken::ClearDefineNum()
-{
-    m_defineNum.clear();
-}
-
-////////////////////////////////////////////////////////////////////////////////
 const CBotToken& CBotToken::operator=(const CBotToken& src)
 {
     assert(m_prev == nullptr);
@@ -459,7 +451,7 @@ CBotToken* CBotToken::NextToken(const char*& program, CBotToken::Data& tokendata
     return t;
 }
 
-CBotTokenUPtr CBotToken::CompileTokens(const std::string& program, CBotToken::Data* tokendata)
+CBotTokenUPtr CBotToken::CompileTokens(const std::string& program, const CBotContext& context, CBotToken::Data* tokendata)
 {
     CBotToken       *nxt, *prv, *tokenbase;
     const char*     p = program.c_str();
@@ -499,7 +491,8 @@ CBotTokenUPtr CBotToken::CompileTokens(const std::string& program, CBotToken::Da
 
         if (nxt->m_type == TokenTypVar)
         {
-           GetDefineNum(nxt->m_text, nxt);
+            if (context.IsDefinedConstant(nxt->m_text))
+                nxt->m_type = TokenTypDef;
         }
     }
 
@@ -525,32 +518,6 @@ int CBotToken::GetKeyWord(const std::string& w)
     return -1;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-bool CBotToken::GetDefineNum(const std::string& name, CBotToken* token)
-{
-    if (m_defineNum.count(name) == 0)
-        return false;
-
-    token->m_type = TokenTypDef;
-    token->m_keywordId = m_defineNum[name];
-    return true;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool CBotToken::DefineNum(const std::string& name, long val)
-{
-    if (m_defineNum.count(name) > 0)
-    {
-        // TODO: No access to the logger from CBot library :(
-        printf("CBOT WARNING: %s redefined\n", name.c_str());
-        return false;
-    }
-
-    m_defineNum[name] = val;
-    return true;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 bool IsOfType(CBotToken* &p, int type1, int type2)
 {
     if (p->GetType() == type1 ||

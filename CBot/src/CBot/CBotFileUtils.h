@@ -21,21 +21,18 @@
 
 #include <cstdint>
 #include <iostream>
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace CBot
 {
 
-class CBotVar;
+class CBotContext;
 class CBotTypResult;
+class CBotVar;
 
-/*!
- * \brief Save a linked list if variables
- * \param ostr Output stream
- * \param pVar First variable in the list
- * \return true on success
- */
-bool SaveVars(std::ostream &ostr, CBotVar* pVar);
+using CBotVarUPtr = std::unique_ptr<CBot::CBotVar>;
 
 /*!
  * \brief WriteWord
@@ -167,6 +164,22 @@ bool WriteDouble(std::ostream &ostr, double d);
 bool ReadDouble(std::istream &istr, double &d);
 
 /*!
+ * \brief WriteSize_t
+ * \param ostr Output stream
+ * \param s
+ * \return true on success
+ */
+bool WriteSize_t(std::ostream &ostr, std::size_t s);
+
+/*!
+ * \brief ReadSize_t
+ * \param istr Input stream
+ * \param s[out]
+ * \return true on success
+ */
+bool ReadSize_t(std::istream &istr, std::size_t &s);
+
+/*!
  * \brief WriteString
  * \param ostr Output stream
  * \param s
@@ -196,7 +209,7 @@ bool WriteType(std::ostream &ostr, const CBotTypResult &type);
  * \param[out] type
  * \return true on success
  */
-bool ReadType(std::istream &istr, CBotTypResult &type);
+bool ReadType(std::istream &istr, CBotTypResult &type, CBotContext& context);
 
 /*!
  * \brief WriteStream
@@ -213,5 +226,11 @@ bool WriteStream(std::ostream &ostr, std::istream& istr);
  * \return true on success
  */
 bool ReadStream(std::istream& istr, std::ostream &ostr);
+
+bool WriteVarListAsArray(std::ostream &ostr, CBotVar* pVar, CBotContext& context);
+bool ReadVarListFromArray(std::istream &istr, CBotVar* &pVar, CBotContext& context);
+
+bool WriteVarArray(std::ostream &ostr, const std::vector<CBotVarUPtr>& vars, CBotContext& context);
+bool ReadVarArray(std::istream &istr, std::vector<CBotVarUPtr>& vars, CBotContext& context);
 
 } // namespace CBot

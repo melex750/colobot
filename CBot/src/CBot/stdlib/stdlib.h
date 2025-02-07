@@ -24,8 +24,5 @@
 namespace CBot
 {
 
-void InitStringFunctions();
-void InitFileFunctions();
-void InitMathFunctions();
 
 } // namespace CBot

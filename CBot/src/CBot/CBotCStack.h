@@ -20,7 +20,6 @@
 #pragma once
 
 #include "CBot/CBotVar/CBotVar.h"
-#include "CBot/CBotProgram.h"
 
 #include <list>
 #include <memory>
@@ -28,8 +27,12 @@
 namespace CBot
 {
 
-class CBotInstr;
+class CBotClass;
+class CBotContext;
 class CBotDefParam;
+class CBotFunction;
+class CBotInstr;
+class CBotProgram;
 class CBotToken;
 
 /*!
@@ -251,6 +254,8 @@ public:
      */
     CBotProgram* GetProgram();
 
+    CBotContext* GetContext() const;
+
     /*!
      * \brief CompileCall
      * \param p
@@ -275,6 +280,8 @@ public:
      * \return
      */
     bool NextToken(CBotToken* &p);
+
+    CBotClass* FindClass(const std::string& name) const;
 
 private:
     std::unique_ptr<CBotCStack> m_next;

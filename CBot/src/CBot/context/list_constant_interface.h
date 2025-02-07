@@ -17,20 +17,31 @@
  * along with this program. If not, see http://gnu.org/licenses
  */
 
-/*!
- * \file CBot.h
- * \brief Public interface of CBot language interpreter. CBot.h is the only file
- * that should be included by any Colobot files outside of the CBot module.
- */
+#pragma once
 
-#include "CBot/CBotFileUtils.h"
-#include "CBot/CBotClass.h"
-#include "CBot/CBotToken.h"
-#include "CBot/CBotProgram.h"
-#include "CBot/CBotTypResult.h"
+#include "CBot/context/list_constant.h"
 
-#include "CBot/CBotVar/CBotVar.h"
+namespace CBot
+{
 
-#include "CBot/context/cbot_context.h"
+class CBotListConstantInterface
+{
+protected:
+    ~CBotListConstantInterface() {}
 
-#include "CBot/stdlib/stdlib_public.h"
+public:
+    template<typename T>
+    bool AddConstant(const std::string& name, const T& value)
+    {
+        return m_listConstant.AddConstant(name, value);
+    }
+
+    virtual bool IsDefinedConstant(const std::string& name) const = 0;
+
+    virtual const CBotVarUPtr& GetDefinedConstant(const std::string& name) = 0;
+
+protected:
+   CBotListConstant m_listConstant;
+};
+
+} // namespace CBot

@@ -51,7 +51,7 @@ public:
         SetValChar(left->GetValChar() >> right->GetValInt());
     }
 
-    bool Save1State(std::ostream &ostr) override
+    bool Save1State(std::ostream &ostr, CBotContext& context) override
     {
         return WriteUInt32(ostr, m_val);
     }

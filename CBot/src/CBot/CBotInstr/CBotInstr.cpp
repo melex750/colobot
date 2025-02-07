@@ -260,7 +260,7 @@ CBotInstr* CBotInstr::Compile(CBotToken* &p, CBotCStack* pStack)
     CBotToken*    ppp = p;
     if (IsOfType(ppp, TokenTypVar))
     {
-        if (CBotClass::Find(p) != nullptr) // Does class with this name exist?
+        if (pStack->FindClass(p->GetString()) != nullptr) // Does class with this name exist?
         {
             // Yes, compile the declaration of the instance
             return CBotDefClass::Compile(p, pStack);

@@ -80,7 +80,6 @@ CScript::CScript(COldObject* object)
 
 CScript::~CScript()
 {
-    
 }
 
 
@@ -165,7 +164,9 @@ bool CScript::CheckToken()
     std::map<std::string, int> cursor1;
     std::map<std::string, int> cursor2;
 
-    auto tokens = CBot::CBotToken::CompileTokens(m_script);
+    const auto& context = m_main->GetCBotContextGlobal();
+
+    auto tokens = CBot::CBotToken::CompileTokens(m_script, *context);
     CBot::CBotToken* bt = tokens.get();
     while ( bt != nullptr )
     {
@@ -225,7 +226,6 @@ static bool isValidRange(const std::string& script, int cursor1, int cursor2)
 bool CScript::Compile()
 {
     std::vector<std::string> functionList;
-    std::string     p;
 
     m_error = CBot::CBotNoErr;
     m_cursor1 = 0;
@@ -242,7 +242,8 @@ bool CScript::Compile()
 
     if (m_botProg == nullptr)
     {
-        m_botProg = std::make_unique<CBot::CBotProgram>(m_object->GetBotVar());
+        auto context = m_main->GetCBotContextForTeam(m_object->GetTeam());
+        m_botProg = std::make_unique<CBot::CBotProgram>(context, m_object->GetBotVar());
     }
 
     if ( m_botProg->Compile(m_script, functionList, this) )
@@ -491,7 +492,7 @@ static void PutList(const std::string& baseName, bool bArray, CBot::CBotVar *var
     int index = 0;
     while (var != nullptr)
     {
-        var->Update(nullptr);
+        var->Update();
         CBot::CBotVar* pStatic = var->GetStaticVar();  // finds the static element
 
         std::string varName;
@@ -655,7 +656,9 @@ void CScript::ColorizeScript(Ui::CEdit* edit, int rangeStart, int rangeEnd)
     std::string text = edit->GetText();
     text = text.substr(rangeStart, rangeEnd-rangeStart);
 
-    auto tokens = CBot::CBotToken::CompileTokens(text.c_str());
+    const auto& context = CRobotMain::GetInstancePointer()->GetCBotContextGlobal();
+
+    auto tokens = CBot::CBotToken::CompileTokens(text.c_str(), *context);
     CBot::CBotToken* bt = tokens.get();
     while ( bt != nullptr )
     {

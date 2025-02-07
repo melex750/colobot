@@ -37,7 +37,6 @@ CBotVarArray::CBotVarArray(const CBotToken& name, CBotTypResult& type) : CBotVar
 
     m_next        = nullptr;
     m_pMyThis    = nullptr;
-    m_pUserPtr    = nullptr;
 
     m_type        = type;
     m_type.SetType(CBotTypArrayPointer);
@@ -49,7 +48,6 @@ CBotVarArray::CBotVarArray(const CBotToken& name, CBotTypResult& type) : CBotVar
 ////////////////////////////////////////////////////////////////////////////////
 CBotVarArray::~CBotVarArray()
 {
-    if ( m_pInstance != nullptr ) m_pInstance->DecrementUse();    // the lowest reference
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -64,20 +62,15 @@ void CBotVarArray::Copy(CBotVar* pSrc, bool bName)
     m_type        = p->m_type;
     m_pInstance = p->GetPointer();
 
-    if ( m_pInstance != nullptr )
-         m_pInstance->IncrementUse();            // a reference increase
-
     m_binit        = p->m_binit;
 //-    m_bStatic    = p->m_bStatic;
     m_pMyThis    = nullptr;//p->m_pMyThis;
-    m_pUserPtr    = p->m_pUserPtr;
 
     // keeps indentificator the same (by default)
     if (m_ident == 0 ) m_ident     = p->m_ident;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-void CBotVarArray::SetPointer(CBotVar* pVarClass)
+void CBotVarArray::SetPointer(const CBotVarSPtr& pVarClass)
 {
     m_binit = CBotVar::InitType::DEF;         // init, even on a null pointer
 
@@ -86,25 +79,21 @@ void CBotVarArray::SetPointer(CBotVar* pVarClass)
 
     if ( pVarClass != nullptr )
     {
-        if ( pVarClass->GetType() == CBotTypArrayPointer )
-             pVarClass = pVarClass->GetPointer();    // the real pointer to the object
-
         if ( !pVarClass->m_type.Eq(CBotTypClass) &&
              !pVarClass->m_type.Eq(CBotTypArrayBody))
             assert(0);
-
-        (static_cast<CBotVarClass*>(pVarClass))->IncrementUse();            // increment the reference
     }
-
-    if ( m_pInstance != nullptr ) m_pInstance->DecrementUse();
-    m_pInstance = static_cast<CBotVarClass*>(pVarClass);
+    m_pInstance = pVarClass;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-CBotVarClass* CBotVarArray::GetPointer()
+CBotVarSPtr CBotVarArray::GetPointer()
 {
-    if ( m_pInstance == nullptr ) return nullptr;
-    return m_pInstance->GetPointer();
+    return m_pInstance;
+}
+
+bool CBotVarArray::PointerIsUnique() const
+{
+    return m_pInstance.use_count() == 1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -116,7 +105,7 @@ CBotVar* CBotVarArray::GetItem(int n, bool bExtend)
         // creates an instance of the table
 
         CBotVarClass* instance = new CBotVarClass(CBotToken(), m_type);
-        SetPointer( instance );
+        SetPointer( instance->GetPointer() );
     }
     return m_pInstance->GetItem(n, bExtend);
 }
@@ -135,11 +124,16 @@ std::string CBotVarArray::GetValString() const
     return m_pInstance->GetValString();
 }
 
-////////////////////////////////////////////////////////////////////////////////
-bool CBotVarArray::Save1State(std::ostream &ostr)
+bool CBotVarArray::Save1State(std::ostream &ostr, CBotContext& context)
 {
     if (!WriteType(ostr, m_type)) return false;
-    return SaveVars(ostr, m_pInstance);                      // saves the instance that manages the table
+
+    if (!m_pInstance) return WriteWord(ostr, 0); // save nullptr
+
+    // save the instance
+    if (!m_pInstance->Save0State(ostr)) return false; // common header
+    if (!m_pInstance->Save1State(ostr, context)) return false; // saves the data or reference
+    return true;
 }
 
 } // namespace CBot

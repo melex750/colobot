@@ -19,7 +19,11 @@
 
 #include "CBot/stdlib/stdlib.h"
 
-#include "CBot/CBot.h"
+#include "CBot/CBotVar/CBotVar.h"
+
+#include "CBot/context/cbot_context.h"
+
+#include "CBot/CBotClass.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -249,26 +253,144 @@ bool rIsNAN(CBotVar* var, CBotVar* result, int& exception, void* user)
     return true;
 }
 
+CBotTypResult cSizeOf( CBotVar* &pVar, void* pUser )
+{
+    if ( pVar == nullptr ) return CBotTypResult( CBotErrLowParam );
+    if ( pVar->GetType() != CBotTypArrayPointer )
+                        return CBotTypResult( CBotErrBadParam );
+    return CBotTypResult( CBotTypInt );
+}
+
+bool rSizeOf( CBotVar* pVar, CBotVar* pResult, int& ex, void* pUser )
+{
+    if ( pVar == nullptr ) { ex = CBotErrLowParam; return true; }
+
+    int i = 0;
+    pVar = pVar->GetItemList();
+
+    while ( pVar != nullptr )
+    {
+        i++;
+        pVar = pVar->GetNext();
+    }
+
+    pResult->SetValInt(i);
+    return true;
+}
+
+// Compilation of class "point".
+
+CBotTypResult cPointConstructor(CBotVar* pThis, CBotVar* &var)
+{
+    if ( var == nullptr )  return CBotTypResult(0);  // ok if no parameter
+
+    if ( var->GetType() == CBotTypClass )  // takes a single point parameter
+    {
+        if ( !var->IsElemOfClass("point") )  return CBotTypResult(CBotErrBadParam);
+        var = var->GetNext();
+        if ( var != nullptr )  return CBotTypResult(CBotErrOverParam);
+        return CBotTypResult(CBotTypVoid);  // this function returns void
+    }
+
+    // First parameter (x):
+    if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
+    var = var->GetNext();
+
+    // Second parameter (y):
+    if ( var == nullptr )  return CBotTypResult(CBotErrLowParam);
+    if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
+    var = var->GetNext();
+
+    // Third parameter (z):
+    if ( var == nullptr )  // only 2 parameters?
+    {
+        return CBotTypResult(CBotTypVoid);  // this function returns void
+    }
+
+    if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
+    var = var->GetNext();
+    if ( var != nullptr )  return CBotTypResult(CBotErrOverParam);
+
+    return CBotTypResult(CBotTypVoid);  // this function returns void
+}
+
+//Execution of the class "point".
+
+bool rPointConstructor(CBotVar* pThis, CBotVar* var, CBotVar* pResult, int& Exception, void* user)
+{
+    if ( var == nullptr )  return true;  // constructor with no parameters is ok
+
+    if ( var->GetType() == CBotTypClass )
+    {
+        pThis->Copy(var, false);
+        return true;  // no interruption
+    }
+
+    pThis->GetItem("x")->SetValFloat( var->GetValFloat() );
+
+    var = var->GetNext();
+    pThis->GetItem("y")->SetValFloat( var->GetValFloat() );
+
+    var = var->GetNext();
+    if ( var == nullptr ) return true;  // ok with only two parameters
+
+    pThis->GetItem("z")->SetValFloat( var->GetValFloat() );
+
+    return true;  // no interruption
+}
+
 } // namespace
 
-void InitMathFunctions()
+void InitErrorConstants(CBotContext& context)
 {
-    CBotProgram::AddFunction("sin",   rSin,   cOneFloat);
-    CBotProgram::AddFunction("cos",   rCos,   cOneFloat);
-    CBotProgram::AddFunction("tan",   rTan,   cOneFloat);
-    CBotProgram::AddFunction("asin",  raSin,  cOneFloat);
-    CBotProgram::AddFunction("acos",  raCos,  cOneFloat);
-    CBotProgram::AddFunction("atan",  raTan,  cOneFloat);
-    CBotProgram::AddFunction("atan2", raTan2, cTwoFloat);
-    CBotProgram::AddFunction("sqrt",  rSqrt,  cOneFloat);
-    CBotProgram::AddFunction("pow",   rPow,   cTwoFloat);
-    CBotProgram::AddFunction("rand",  rRand,  cNull);
-    CBotProgram::AddFunction("abs",   rAbs,   cAbs);
-    CBotProgram::AddFunction("floor", rFloor, cOneFloat);
-    CBotProgram::AddFunction("ceil",  rCeil,  cOneFloat);
-    CBotProgram::AddFunction("round", rRound, cOneFloat);
-    CBotProgram::AddFunction("trunc", rTrunc, cOneFloat);
-    CBotProgram::AddFunction("isnan", rIsNAN, cIsNAN);
+    context.AddConstant<int>("CBotErrZeroDiv",    CBotErrZeroDiv);    // division by zero
+    context.AddConstant<int>("CBotErrNotInit",    CBotErrNotInit);    // uninitialized variable
+    context.AddConstant<int>("CBotErrBadThrow",   CBotErrBadThrow);   // throw a negative value
+    context.AddConstant<int>("CBotErrNoRetVal",   CBotErrNoRetVal);   // function did not return results
+    context.AddConstant<int>("CBotErrNoRun",      CBotErrNoRun);      // active Run () without a function // TODO: Is this actually a runtime error?
+    context.AddConstant<int>("CBotErrUndefFunc",  CBotErrUndefFunc);  // Calling a function that no longer exists
+    context.AddConstant<int>("CBotErrNotClass",   CBotErrNotClass);   // Class no longer exists
+    context.AddConstant<int>("CBotErrNull",       CBotErrNull);       // Attempted to use a null pointer
+    context.AddConstant<int>("CBotErrNan",        CBotErrNan);        // Can't do operations on nan
+    context.AddConstant<int>("CBotErrOutArray",   CBotErrOutArray);   // Attempted access out of bounds of an array
+    context.AddConstant<int>("CBotErrStackOver",  CBotErrStackOver);  // Stack overflow
+    context.AddConstant<int>("CBotErrDeletedPtr", CBotErrDeletedPtr); // Attempted to use deleted object
+
+    // TODO: Check the other CBotError runtime codes to see if they should be included here too...
+}
+
+void InitMathLibrary(CBotContext& context)
+{
+    context.AddConstant<float>("PI", PI);
+
+    context.AddFunction("sin",   rSin,   cOneFloat);
+    context.AddFunction("cos",   rCos,   cOneFloat);
+    context.AddFunction("tan",   rTan,   cOneFloat);
+    context.AddFunction("asin",  raSin,  cOneFloat);
+    context.AddFunction("acos",  raCos,  cOneFloat);
+    context.AddFunction("atan",  raTan,  cOneFloat);
+    context.AddFunction("atan2", raTan2, cTwoFloat);
+    context.AddFunction("sqrt",  rSqrt,  cOneFloat);
+    context.AddFunction("pow",   rPow,   cTwoFloat);
+    context.AddFunction("rand",  rRand,  cNull);
+    context.AddFunction("abs",   rAbs,   cAbs);
+    context.AddFunction("floor", rFloor, cOneFloat);
+    context.AddFunction("ceil",  rCeil,  cOneFloat);
+    context.AddFunction("round", rRound, cOneFloat);
+    context.AddFunction("trunc", rTrunc, cOneFloat);
+    context.AddFunction("isnan", rIsNAN, cIsNAN);
+
+    context.AddFunction("sizeof", rSizeOf, cSizeOf);
+
+    auto pnt = context.FindClass("point");
+    if (pnt == nullptr)
+    {
+        pnt = context.CreateClass("point", nullptr, true);  // intrinsic class
+        pnt->AddItem("x", CBotTypFloat);
+        pnt->AddItem("y", CBotTypFloat);
+        pnt->AddItem("z", CBotTypFloat);
+        pnt->AddFunction("point", rPointConstructor, cPointConstructor);
+    }
 }
 
 } // namespace CBot

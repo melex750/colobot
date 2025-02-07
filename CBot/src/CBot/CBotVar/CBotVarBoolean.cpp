@@ -40,7 +40,7 @@ void CBotVarBoolean::Not()
     SetValInt(!GetValInt());
 }
 
-bool CBotVarBoolean::Save1State(std::ostream &ostr)
+bool CBotVarBoolean::Save1State(std::ostream &ostr, CBotContext& context)
 {
     return WriteByte(ostr, m_val);                          // the value of the variable
 }

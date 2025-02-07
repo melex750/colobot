@@ -25,15 +25,14 @@
 
 #include "CBot/CBotInstr/CBotInstr.h"
 
+#include "CBot/context/cbot_context.h"
+#include "CBot/context/cbot_user_pointer.h"
+
 #include <cassert>
 
 namespace CBot
 {
 
-////////////////////////////////////////////////////////////////////////////////
-std::set<CBotVarClass*> CBotVarClass::m_instances{};
-
-////////////////////////////////////////////////////////////////////////////////
 CBotVarClass::CBotVarClass(const CBotToken& name, const CBotTypResult& type) : CBotVar(name)
 {
     if ( !type.Eq(CBotTypClass)        &&
@@ -44,7 +43,6 @@ CBotVarClass::CBotVarClass(const CBotToken& name, const CBotTypResult& type) : C
 
     m_next        = nullptr;
     m_pMyThis    = nullptr;
-    m_pUserPtr    = OBJECTCREATED;//nullptr;
     m_InitExpr = nullptr;
     m_LimExpr = nullptr;
     m_pVar        = nullptr;
@@ -58,11 +56,6 @@ CBotVarClass::CBotVarClass(const CBotToken& name, const CBotTypResult& type) : C
     m_bStatic    = false;
     m_mPrivate    = ProtectionLevel::Public;
     m_bConstructor = false;
-    m_CptUse    = 0;
-    m_ItemIdent = type.Eq(CBotTypIntrinsic) ? 0 : CBotVar::NextUniqNum();
-
-    // add to the list
-    if (m_ItemIdent != 0) m_instances.insert(this);
 
     CBotClass* pClass = type.GetClass();
 
@@ -73,12 +66,7 @@ CBotVarClass::CBotVarClass(const CBotToken& name, const CBotTypResult& type) : C
 ////////////////////////////////////////////////////////////////////////////////
 CBotVarClass::~CBotVarClass( )
 {
-    if ( m_CptUse != 0 )
-        assert(0);
-
-    // removes the class list
-    m_instances.erase(this);
-
+    CallDestructor(); // TODO
     delete    m_pVar;
 }
 
@@ -91,9 +79,8 @@ void CBotVarClass::ConstructorSet()
 ////////////////////////////////////////////////////////////////////////////////
 void CBotVarClass::Copy(CBotVar* pSrc, bool bName)
 {
-    pSrc = pSrc->GetPointer();                    // if source given by a pointer
-
-    if ( pSrc->GetType() != CBotTypClass )
+    auto srcType = pSrc->GetType();
+    if ( srcType != CBotTypClass && srcType != CBotTypIntrinsic)
         assert(0);
 
     CBotVarClass*    p = static_cast<CBotVarClass*>(pSrc);
@@ -105,10 +92,7 @@ void CBotVarClass::Copy(CBotVar* pSrc, bool bName)
 //-    m_bStatic    = p->m_bStatic;
     m_pClass    = p->m_pClass;
 
-//    m_next        = nullptr;
-    m_pUserPtr    = p->m_pUserPtr;
     m_pMyThis    = nullptr;//p->m_pMyThis;
-    m_ItemIdent = p->m_ItemIdent;
 
     // keeps indentificator the same (by default)
     if (m_ident == 0 ) m_ident     = p->m_ident;
@@ -128,17 +112,8 @@ void CBotVarClass::Copy(CBotVar* pSrc, bool bName)
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-void CBotVarClass::SetIdent(long n)
-{
-    m_ItemIdent = n;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 void CBotVarClass::SetClass(CBotClass* pClass)//, int &nIdent)
 {
-    m_type.m_class = pClass;
-
     if ( m_pClass == pClass ) return;
 
     m_pClass = pClass;
@@ -149,6 +124,11 @@ void CBotVarClass::SetClass(CBotClass* pClass)//, int &nIdent)
 
     if (pClass == nullptr) return;
 
+    m_type.m_class = pClass;
+
+    auto context = pClass->GetContext();
+    if (!context) return;
+
     CBotVar* pv = nullptr;
     while (pClass != nullptr)
     {
@@ -158,7 +138,7 @@ void CBotVarClass::SetClass(CBotClass* pClass)//, int &nIdent)
         CBotInstr*    p  = pv->m_LimExpr;                            // the different formulas
         if ( p != nullptr )
         {
-            CBotStack* pile = CBotStack::AllocateStack();    // an independent stack
+            CBotStack* pile = CBotStack::AllocateStack(context.get()); // an independent stack
             int     n = 0;
             int     max[100];
 
@@ -183,7 +163,7 @@ void CBotVarClass::SetClass(CBotClass* pClass)//, int &nIdent)
         if ( pv->m_InitExpr != nullptr )                // expression for initialization?
         {
 #if    STACKMEM
-            CBotStack* pile = CBotStack::AllocateStack();    // an independent stack
+            CBotStack* pile = CBotStack::AllocateStack(context.get()); // an independent stack
 
             while(pile->IsOk() && !pv->m_InitExpr->Execute(pile, pn));    // evaluates the expression without timer
 
@@ -213,16 +193,28 @@ CBotClass* CBotVarClass::GetClass()
     return    m_pClass;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-void CBotVarClass::Update(void* pUser)
+void CBotVarClass::Update()
 {
-    // retrieves the user pointer according to the class
-    // or according to the parameter passed to CBotProgram::Run()
+    if (!m_userPtr) return;
 
-    if ( m_pUserPtr != nullptr) pUser = m_pUserPtr;
-    if ( pUser == OBJECTDELETED ||
-         pUser == OBJECTCREATED ) return;
-    m_pClass->Update(this, pUser);
+    void* user = m_userPtr->GetPointerAs<void>();
+
+    if (user == nullptr) return;
+
+    m_pClass->Update(this, user);
+}
+
+void CBotVarClass::SetUserPointer(std::unique_ptr<CBotUserPointer> user)
+{
+    if (m_userPtr)
+        assert(false);
+    else
+        m_userPtr = std::move(user);
+}
+
+const std::unique_ptr<CBotUserPointer>& CBotVarClass::GetUserPointer()
+{
+    return m_userPtr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -362,30 +354,25 @@ std::string CBotVarClass::GetValString() const
     return    res;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-void CBotVarClass::IncrementUse()
+void CBotVarClass::CallDestructor()
 {
-    m_CptUse++;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void CBotVarClass::DecrementUse()
-{
-    m_CptUse--;
-    if ( m_CptUse == 0 )
     {
         // if there is one, call the destructor
         // but only if a constructor had been called.
         if ( m_bConstructor )
         {
-            m_CptUse++;    // does not return to the destructor
+            m_bConstructor = false;
+            auto context = m_pClass->GetContext();
 
-            CBotStack*  pile = CBotStack::AllocateStack();
+            CBotStack*  pile = CBotStack::AllocateStack(context.get());
             CBotVar*    ppVars[1];
             ppVars[0] = nullptr;
 
             CBotVar*    pThis  = CBotVar::Create("this", CBotTypNullPointer);
-            pThis->SetPointer(this);
+            // create a non-deleting shared_ptr
+            std::shared_ptr<CBotVar> tempPtr(this, [](CBotVar *p){});
+            m_weakPtr = tempPtr;
+            pThis->SetPointer(tempPtr);
 
             std::string    nom = std::string("~") + m_pClass->GetName();
             long        ident = 0;
@@ -396,28 +383,22 @@ void CBotVarClass::DecrementUse()
 
             pile->Delete();
             delete pThis;
-            m_CptUse--;
         }
-
-        delete this; // self-destructs!
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-CBotVarClass* CBotVarClass::GetPointer()
+CBotVarSPtr CBotVarClass::GetPointer()
 {
-    return this;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-CBotVarClass* CBotVarClass::Find(long id)
-{
-    for (CBotVarClass* p : m_instances)
+    auto sharedPtr = m_weakPtr.lock();
+    if (!sharedPtr)
     {
-        if (p->m_ItemIdent == id) return p;
+        if (m_pClass!=nullptr && m_pClass->IsIntrinsic())
+            assert(0);
+        else
+            sharedPtr.reset(this, CBotVar::Destroy);
+        m_weakPtr = sharedPtr;
     }
-
-    return nullptr;
+    return sharedPtr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -454,13 +435,38 @@ bool CBotVarClass::Ne(CBotVar* left, CBotVar* right)
     return l != r;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-bool CBotVarClass::Save1State(std::ostream &ostr)
+bool CBotVarClass::Save1State(std::ostream &ostr, CBotContext& context)
 {
-    if (!WriteType(ostr, m_type)) return false;
-    if (!WriteLong(ostr, m_ItemIdent)) return false;
+    auto pClass = m_type.GetClass();
+    if (pClass != nullptr && pClass->IsIntrinsic())
+    {
+        if (!WriteInt(ostr, 0)) return false; // save the object
+    }
+    else
+    {
+        int id = context.FindInstance(this);
+        if (id == -1)
+        {
+            if (!WriteInt(ostr, 0)) return false; // save the object
+            context.DeclareInstance(this); // create unique 'id' before saving fields
+        }
+        else // save only the id of the already saved instance
+        {
+            return WriteInt(ostr, id); // save the reference
+        }
+    }
 
-    return SaveVars(ostr, m_pVar);                              // content of the object
+    if (!WriteType(ostr, m_type)) return false;
+    if (!WriteVarListAsArray(ostr, m_pVar, context)) return false;
+
+    if (!m_type.Eq(CBotTypArrayBody))
+    {
+        for (auto var = m_pVar; var != nullptr; var = var->GetNext())
+        {
+            if (!WriteLong(ostr, var->m_ident)) return false;
+        }
+    }
+    return true;
 }
 
 } // namespace CBot

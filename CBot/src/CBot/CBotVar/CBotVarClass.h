@@ -21,8 +21,6 @@
 
 #include "CBot/CBotVar/CBotVar.h"
 
-#include <set>
-
 namespace CBot
 {
 
@@ -54,40 +52,13 @@ public:
     CBotVar* GetItemList() override;
     std::string GetValString() const override;
 
-    bool Save1State(std::ostream &ostr) override;
+    bool Save1State(std::ostream &ostr, CBotContext& context) override;
 
-    void Update(void* pUser) override;
+    void Update() override;
+    void SetUserPointer(std::unique_ptr<CBotUserPointer> user) override;
+    const std::unique_ptr<CBotUserPointer>& GetUserPointer() override;
 
-    //! \name Reference counter
-    //@{
-
-    /**
-     * \brief Increment reference counter
-     */
-    void IncrementUse();
-
-    /**
-     * \brief Decrement reference counter
-     */
-    void DecrementUse();
-
-    //@}
-
-    CBotVarClass* GetPointer() override;
-
-    //! \name Unique instance identifier
-    //@{
-
-    void SetIdent(long n) override;
-
-    /*!
-     * \brief Finds a class instance by unique identifier
-     * \param id Identifier to find
-     * \return Found class instance
-     */
-    static CBotVarClass* Find(long id);
-
-    //@}
+    CBotVarSPtr GetPointer() override;
 
     bool Eq(CBotVar* left, CBotVar* right) override;
     bool Ne(CBotVar* left, CBotVar* right) override;
@@ -95,18 +66,19 @@ public:
     void ConstructorSet() override;
 
 private:
-    //! List of all class instances - first
-    static std::set<CBotVarClass*> m_instances;
+    void CallDestructor(); //TODO
+
+private:
     //! Class definition
     CBotClass* m_pClass;
     //! Class members
     CBotVar* m_pVar;
-    //! Reference counter
-    int m_CptUse;
-    //! Identifier (unique) of an instance
-    long m_ItemIdent;
+    //! Weak pointer to self
+    std::weak_ptr<CBotVar> m_weakPtr;
     //! Set after constructor is called, allows destructor to be called
     bool m_bConstructor;
+
+    std::unique_ptr<CBotUserPointer> m_userPtr;
 
     friend class CBotVar;
     friend class CBotVarPointer;

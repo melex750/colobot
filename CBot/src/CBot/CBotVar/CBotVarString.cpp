@@ -37,7 +37,7 @@ bool CBotVarString::Ne(CBotVar* left, CBotVar* right)
     return left->GetValString() != right->GetValString();
 }
 
-bool CBotVarString::Save1State(std::ostream &ostr)
+bool CBotVarString::Save1State(std::ostream &ostr, CBotContext& context)
 {
     return WriteString(ostr, m_val);
 }

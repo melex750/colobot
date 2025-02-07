@@ -425,8 +425,8 @@ bool CBotTwoOpExpr::Execute(CBotStack* &pStack)
     }
     else
     {
-        left->Update(nullptr);
-        right->Update(nullptr);
+        left->Update();
+        right->Update();
     }
 
     if ( GetTokenType() == ID_ADD && type1.Eq(CBotTypString) )

@@ -37,7 +37,7 @@ public:
     void XOr(CBotVar* left, CBotVar* right) override;
     void Not() override;
 
-    bool Save1State(std::ostream &ostr) override;
+    bool Save1State(std::ostream &ostr, CBotContext& context) override;
 };
 
 } // namespace CBot

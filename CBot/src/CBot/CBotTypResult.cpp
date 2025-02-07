@@ -32,24 +32,20 @@ namespace CBot
 CBotTypResult::CBotTypResult(int type)
     : m_type(type)
 {
-}
-
-CBotTypResult::CBotTypResult(int type, const std::string& name)
-    : m_type(type)
-{
-    if ( type == CBotTypPointer ||
-         type == CBotTypClass   ||
-         type == CBotTypIntrinsic )
-    {
-        m_class = CBotClass::Find(name);
-        if (m_class && m_class->IsIntrinsic() ) m_type = CBotTypIntrinsic;
-    }
+    // only primitive types, CBotTypNullPointer, or CBotError allowed
+    // other types must use a different constructor
+    assert( type != CBotTypArrayPointer );
+    assert( type != CBotTypArrayBody );
+    assert( type != CBotTypIntrinsic );
+    assert( type != CBotTypPointer );
+    assert( type != CBotTypClass );
 }
 
 CBotTypResult::CBotTypResult(int type, CBotClass* pClass)
     : m_type(type),
       m_class(pClass)
 {
+    if (type != CBotTypNullPointer) assert(pClass != nullptr);
     if (m_class && m_class->IsIntrinsic() ) m_type = CBotTypIntrinsic;
 }
 
@@ -66,6 +62,18 @@ CBotTypResult::CBotTypResult(const CBotTypResult& typ)
       m_class(typ.m_class),
       m_limite(typ.m_limite)
 {
+    if (m_type == CBotTypPointer ||
+        m_type == CBotTypClass  ||
+        m_type == CBotTypIntrinsic)
+    {
+        assert(m_class != nullptr);
+    }
+
+    if (typ.Eq(CBotTypArrayPointer) ||
+        typ.Eq(CBotTypArrayBody))
+    {
+        assert(typ.m_elementType);
+    }
 
     if ( typ.m_elementType )
         m_elementType = std::make_unique<CBotTypResult>(*typ.m_elementType);
@@ -123,6 +131,7 @@ bool CBotTypResult::Compare(const CBotTypResult& typ) const
          m_type == CBotTypClass   ||
          m_type == CBotTypIntrinsic )
     {
+        assert(m_class != nullptr && typ.m_class != nullptr);
         return m_class == typ.m_class;
     }
 
@@ -139,6 +148,19 @@ CBotTypResult& CBotTypResult::operator=(const CBotTypResult& src)
     m_type = src.m_type;
     m_limite = src.m_limite;
     m_class = src.m_class;
+    if (m_type == CBotTypPointer ||
+        m_type == CBotTypClass  ||
+        m_type == CBotTypIntrinsic)
+    {
+        assert(m_class != nullptr);
+    }
+
+    if (src.Eq(CBotTypArrayPointer) ||
+        src.Eq(CBotTypArrayBody))
+    {
+        assert(src.m_elementType);
+    }
+
     if ( src.m_elementType )
     {
         m_elementType = std::make_unique<CBotTypResult>(*src.m_elementType);

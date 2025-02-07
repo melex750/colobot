@@ -32,7 +32,7 @@ class CBotVarDouble : public CBotVarNumber<double, CBotTypDouble>
 public:
     CBotVarDouble(const CBotToken &name) : CBotVarNumber(name) {}
 
-    bool Save1State(std::ostream &ostr) override
+    bool Save1State(std::ostream &ostr, CBotContext& context) override
     {
         return WriteDouble(ostr, m_val);
     }

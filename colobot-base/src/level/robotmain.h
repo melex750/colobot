@@ -100,6 +100,11 @@ class COldObject;
 class CPauseManager;
 struct ActivePause;
 
+namespace CBot
+{
+class CBotContext;
+}
+
 namespace Gfx
 {
 class CEngine;
@@ -514,6 +519,10 @@ public:
     //! Returns a set of all team IDs in the current level that are still active
     std::set<int> GetAllActiveTeams();
 
+    const std::shared_ptr<CBot::CBotContext>& GetCBotContextGlobal();
+
+    std::shared_ptr<CBot::CBotContext> GetCBotContextForTeam(int team);
+
 protected:
     bool        EventFrame(const Event &event);
     bool        EventObject(const Event &event);
@@ -695,6 +704,10 @@ protected:
     bool            m_codeBattleSpectator = true;
 
     std::map<int, std::string> m_teamNames;
+
+    std::map<int, std::weak_ptr<CBot::CBotContext>> m_teamCBotContext;
+
+    std::shared_ptr<CBot::CBotContext> m_globalCBotContext;
 
     std::vector<NewScriptName> m_newScriptName;
 

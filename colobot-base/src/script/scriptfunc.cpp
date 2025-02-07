@@ -69,6 +69,7 @@
 #include "ui/displaytext.h"
 
 #include <cmath>
+#include <string>
 
 using namespace CBot;
 
@@ -309,7 +310,11 @@ CBotTypResult CScriptFunctions::cGetObject(CBotVar* &var, void* user)
     var = var->GetNext();
     if ( var != nullptr )  return CBotTypResult(CBotErrOverParam);
 
-    return CBotTypResult(CBotTypPointer, "object");
+    auto script = static_cast<CScript*>(user);
+    auto& context = script->m_main->GetCBotContextGlobal();
+    auto pClass = context->FindClass("object");
+
+    return CBotTypResult(CBotTypPointer, pClass);
 }
 
 // Instruction "retobjectbyid(rank)".
@@ -328,7 +333,7 @@ bool CScriptFunctions::rGetObjectById(CBotVar* var, CBotVar* result, int& except
     }
     else
     {
-        result->SetPointer(pObj->GetBotVar());
+        result->SetPointer( pObj->GetBotVar()->GetPointer() );
     }
 
     return true;
@@ -350,7 +355,7 @@ bool CScriptFunctions::rGetObject(CBotVar* var, CBotVar* result, int& exception,
     }
     else
     {
-        result->SetPointer(pObj->GetBotVar());
+        result->SetPointer( pObj->GetBotVar()->GetPointer() );
     }
     return true;
 }
@@ -371,7 +376,7 @@ bool CScriptFunctions::rIsBusy(CBotVar* var, CBotVar* result, int& exception, vo
 
     exception = 0;
 
-    CObject* obj = static_cast<CObject*>(var->GetUserPtr());
+    CObject* obj = var->GetUserPointer()->GetPointerAs<CObject>();
     if (obj == nullptr)
     {
         exception = ERR_WRONG_OBJ;
@@ -408,7 +413,7 @@ bool CScriptFunctions::rDestroy(CBotVar* var, CBotVar* result, int& exception, v
     if (var == nullptr)
         obj = CObjectManager::GetInstancePointer()->FindNearest(pThis, OBJECT_DESTROYER);
     else
-        obj = static_cast<CObject*>(var->GetUserPtr());
+        obj = var->GetUserPointer()->GetPointerAs<CObject>();
 
     if (obj == nullptr)
     {
@@ -493,7 +498,7 @@ bool CScriptFunctions::rFactory(CBotVar* var, CBotVar* result, int& exception, v
     if (var == nullptr)
         factory = CObjectManager::GetInstancePointer()->FindNearest(pThis, OBJECT_FACTORY);
     else
-        factory = static_cast<CObject*>(var->GetUserPtr());
+        factory = var->GetUserPointer()->GetPointerAs<CObject>();
 
     if (factory == nullptr)
     {
@@ -583,7 +588,7 @@ bool CScriptFunctions::rResearch(CBotVar* var, CBotVar* result, int& exception, 
     if (var == nullptr)
         center = CObjectManager::GetInstancePointer()->FindNearest(pThis, OBJECT_RESEARCH);
     else
-        center = static_cast<CObject*>(var->GetUserPtr());
+        center = var->GetUserPointer()->GetPointerAs<CObject>();
 
     if (center == nullptr)
     {
@@ -668,7 +673,7 @@ bool CScriptFunctions::rTakeOff(CBotVar* var, CBotVar* result, int& exception, v
     if (var == nullptr)
         base = CObjectManager::GetInstancePointer()->FindNearest(pThis, OBJECT_BASE);
     else
-        base = static_cast<CObject*>(var->GetUserPtr());
+        base = var->GetUserPointer()->GetPointerAs<CObject>();
 
     if (base == nullptr)
     {
@@ -815,12 +820,20 @@ static CBotTypResult compileSearch(CBotVar* &var, void* user, CBotTypResult retu
 
 CBotTypResult CScriptFunctions::cSearch(CBotVar* &var, void* user)
 {
-    return compileSearch(var, user, CBotTypResult(CBotTypPointer, "object"));
+    auto script = static_cast<CScript*>(user);
+    auto& context = script->m_main->GetCBotContextGlobal();
+    auto pClass = context->FindClass("object");
+
+    return compileSearch(var, user, CBotTypResult(CBotTypPointer, pClass));
 }
 
 CBotTypResult CScriptFunctions::cSearchAll(CBotVar* &var, void* user)
 {
-    return compileSearch(var, user, CBotTypResult(CBotTypArrayPointer, CBotTypResult(CBotTypPointer, "object")));
+    auto script = static_cast<CScript*>(user);
+    auto& context = script->m_main->GetCBotContextGlobal();
+    auto pClass = context->FindClass("object");
+
+    return compileSearch(var, user, CBotTypResult(CBotTypArrayPointer, CBotTypResult(CBotTypPointer, pClass)));
 }
 
 static bool runSearch(CBotVar* var, glm::vec3 pos, int& exception, std::function<bool(std::vector<ObjectType>, glm::vec3, float, float, bool, RadarFilter)> code)
@@ -933,7 +946,7 @@ bool CScriptFunctions::rSearch(CBotVar* var, CBotVar* result, int& exception, vo
         }
         else
         {
-            result->SetPointer(pBest->GetBotVar());
+            result->SetPointer( pBest->GetBotVar()->GetPointer() );
         }
 
         return true;
@@ -952,7 +965,7 @@ bool CScriptFunctions::rSearchAll(CBotVar* var, CBotVar* result, int& exception,
         result->SetInit(CBotVar::InitType::DEF);
         for (CObject* obj : best)
         {
-            result->GetItem(i++, true)->SetPointer(obj->GetBotVar());
+            result->GetItem(i++, true)->SetPointer( obj->GetBotVar()->GetPointer() );
         }
 
         return true;
@@ -994,14 +1007,22 @@ static CBotTypResult compileRadar(CBotVar* &var, void* user, CBotTypResult retur
 
 CBotTypResult CScriptFunctions::cRadarAll(CBotVar* &var, void* user)
 {
-    return compileRadar(var, user, CBotTypResult(CBotTypArrayPointer, CBotTypResult(CBotTypPointer, "object")));
+    auto script = static_cast<CScript*>(user);
+    auto& context = script->m_main->GetCBotContextGlobal();
+    auto pClass = context->FindClass("object");
+
+    return compileRadar(var, user, CBotTypResult(CBotTypArrayPointer, CBotTypResult(CBotTypPointer, pClass)));
 }
 
 // Compilation of instruction "radar(type, angle, focus, min, max, sens)".
 
 CBotTypResult CScriptFunctions::cRadar(CBotVar* &var, void* user)
 {
-    return compileRadar(var, user, CBotTypResult(CBotTypPointer, "object"));
+    auto script = static_cast<CScript*>(user);
+    auto& context = script->m_main->GetCBotContextGlobal();
+    auto pClass = context->FindClass("object");
+
+    return compileRadar(var, user, CBotTypResult(CBotTypPointer, pClass));
 }
 
 static bool runRadar(CBotVar* var, std::function<bool(std::vector<ObjectType>, float, float, float, float, bool, RadarFilter)> code)
@@ -1124,7 +1145,7 @@ bool CScriptFunctions::rRadar(CBotVar* var, CBotVar* result, int& exception, voi
         }
         else
         {
-            result->SetPointer(best->GetBotVar());
+            result->SetPointer( best->GetBotVar()->GetPointer() );
         }
 
         return true;
@@ -1142,7 +1163,7 @@ bool CScriptFunctions::rRadarAll(CBotVar* var, CBotVar* result, int& exception, 
         result->SetInit(CBotVar::InitType::DEF);
         for (CObject* obj : best)
         {
-            result->GetItem(i++, true)->SetPointer(obj->GetBotVar());
+            result->GetItem(i++, true)->SetPointer( obj->GetBotVar()->GetPointer() );
         }
 
         return true;
@@ -1793,24 +1814,37 @@ CBotTypResult CScriptFunctions::cSpace(CBotVar* &var, void* user)
 {
     CBotTypResult   ret;
 
-    if ( var == nullptr )  return CBotTypResult(CBotTypIntrinsic, "point");
-    ret = cPoint(var, user);
-    if ( ret.GetType() != 0 )  return ret;
+    if ( var != nullptr )
+    {
+        ret = cPoint(var, user);
+        if ( ret.GetType() != 0 )  return ret;
 
-    if ( var == nullptr )  return CBotTypResult(CBotTypIntrinsic, "point");
-    if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
-    var = var->GetNext();
+        if ( var != nullptr )
+        {
+            if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
+            var = var->GetNext();
 
-    if ( var == nullptr )  return CBotTypResult(CBotTypIntrinsic, "point");
-    if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
-    var = var->GetNext();
+            if ( var != nullptr )
+            {
+                if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
+                var = var->GetNext();
 
-    if ( var == nullptr )  return CBotTypResult(CBotTypIntrinsic, "point");
-    if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
-    var = var->GetNext();
+                if ( var != nullptr )
+                {
+                    if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
+                    var = var->GetNext();
 
-    if ( var != nullptr )  return CBotTypResult(CBotErrOverParam);
-    return CBotTypResult(CBotTypIntrinsic, "point");
+                    if ( var != nullptr )  return CBotTypResult(CBotErrOverParam);
+                }
+            }
+        }
+    }
+
+    auto script = static_cast<CScript*>(user);
+    auto& context = script->m_main->GetCBotContextGlobal();
+    auto pClass = context->FindClass("point");
+
+    return CBotTypResult(CBotTypIntrinsic, pClass);
 }
 
 // Instruction "space(center, rMin, rMax, dist)".
@@ -1894,20 +1928,31 @@ CBotTypResult CScriptFunctions::cFlatSpace(CBotVar* &var, void* user)
     if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
     var = var->GetNext();
 
-    if ( var == nullptr )  return CBotTypResult(CBotTypIntrinsic, "point");
-    if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
-    var = var->GetNext();
+    if ( var != nullptr )
+    {
+        if (var->GetType() > CBotTypDouble) return CBotTypResult(CBotErrBadNum);
+        var = var->GetNext();
 
-    if ( var == nullptr )  return CBotTypResult(CBotTypIntrinsic, "point");
-    if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
-    var = var->GetNext();
+        if ( var != nullptr )
+        {
+            if (var->GetType() > CBotTypDouble) return CBotTypResult(CBotErrBadNum);
+            var = var->GetNext();
 
-    if ( var == nullptr )  return CBotTypResult(CBotTypIntrinsic, "point");
-    if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
-    var = var->GetNext();
+            if ( var != nullptr )
+            {
+                if (var->GetType() > CBotTypDouble) return CBotTypResult(CBotErrBadNum);
+                var = var->GetNext();
 
-    if ( var != nullptr )  return CBotTypResult(CBotErrOverParam);
-    return CBotTypResult(CBotTypIntrinsic, "point");
+                if ( var != nullptr )  return CBotTypResult(CBotErrOverParam);
+            }
+        }
+    }
+
+    auto script = static_cast<CScript*>(user);
+    auto& context = script->m_main->GetCBotContextGlobal();
+    auto pClass = context->FindClass("point");
+
+    return CBotTypResult(CBotTypIntrinsic, pClass);
 }
 
 bool CScriptFunctions::rFlatSpace(CBotVar* var, CBotVar* result, int& exception, void* user)
@@ -3253,7 +3298,7 @@ bool CScriptFunctions::rCameraFocus(CBotVar* var, CBotVar* result, int& exceptio
     }
     else
     {
-        object = static_cast<CObject*>(var->GetUserPtr());
+        object = var->GetUserPointer()->GetPointerAs<CObject>();
         var = var->GetNext();
     }
     if (var != nullptr)
@@ -3280,97 +3325,6 @@ bool CScriptFunctions::rCameraFocus(CBotVar* var, CBotVar* result, int& exceptio
     result->SetValInt(ERR_OK);
     exception = ERR_OK;
     return true;
-}
-
-
-// Compilation of class "point".
-
-CBotTypResult CScriptFunctions::cPointConstructor(CBotVar* pThis, CBotVar* &var)
-{
-    if ( !pThis->IsElemOfClass("point") )  return CBotTypResult(CBotErrBadNum);
-
-    if ( var == nullptr )  return CBotTypResult(0);  // ok if no parameter
-
-    // First parameter (x):
-    if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
-    var = var->GetNext();
-
-    // Second parameter (y):
-    if ( var == nullptr )  return CBotTypResult(CBotErrLowParam);
-    if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
-    var = var->GetNext();
-
-    // Third parameter (z):
-    if ( var == nullptr )  // only 2 parameters?
-    {
-        return CBotTypResult(0);  // this function returns void
-    }
-
-    if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
-    var = var->GetNext();
-    if ( var != nullptr )  return CBotTypResult(CBotErrOverParam);
-
-    return CBotTypResult(0);  // this function returns void
-}
-
-//Execution of the class "point".
-
-bool CScriptFunctions::rPointConstructor(CBotVar* pThis, CBotVar* var, CBotVar* pResult, int& Exception, void* user)
-{
-    CBotVar     *pX, *pY, *pZ;
-
-    if ( var == nullptr )  return true;  // constructor with no parameters is ok
-
-    if ( var->GetType() > CBotTypDouble )
-    {
-        Exception = CBotErrBadNum;  return false;
-    }
-
-    pX = pThis->GetItem("x");
-    if ( pX == nullptr )
-    {
-        Exception = CBotErrUndefItem;  return false;
-    }
-    pX->SetValFloat( var->GetValFloat() );
-    var = var->GetNext();
-
-    if ( var == nullptr )
-    {
-        Exception = CBotErrLowParam;  return false;
-    }
-
-    if ( var->GetType() > CBotTypDouble )
-    {
-        Exception = CBotErrBadNum;  return false;
-    }
-
-    pY = pThis->GetItem("y");
-    if ( pY == nullptr )
-    {
-        Exception = CBotErrUndefItem;  return false;
-    }
-    pY->SetValFloat( var->GetValFloat() );
-    var = var->GetNext();
-
-    if ( var == nullptr )
-    {
-        return true;  // ok with only two parameters
-    }
-
-    pZ = pThis->GetItem("z");
-    if ( pZ == nullptr )
-    {
-        Exception = CBotErrUndefItem;  return false;
-    }
-    pZ->SetValFloat( var->GetValFloat() );
-    var = var->GetNext();
-
-    if ( var != nullptr )
-    {
-        Exception = CBotErrOverParam;  return false;
-    }
-
-    return  true;  // no interruption
 }
 
 class CBotFileColobot : public CBotFile
@@ -3488,203 +3442,240 @@ private:
     }
 };
 
+// Instruction "deletefile(filename)".
 
-
-// Initializes all functions for module CBOT.
-
-void CScriptFunctions::Init()
+bool CScriptFunctions::rDeleteFile(CBotVar* var, CBotVar* result, int& exception, void* user)
 {
-    CBotProgram::Init();
+    std::filesystem::path filename;
+    try
+    {
+        filename = StrUtils::ToPath(var->GetValString());
+    }
+    catch(...)
+    {
+        exception = CBotErrFileOpen;
+        return false;
+    }
+
+    auto script = static_cast<CScript*>(user);
+    const auto& context = static_cast<CScript*>(user)->m_main->GetCBotContextGlobal();
+
+    if (context->GetFileAccessHandler()->DeleteFile(filename))
+    {
+        result->SetValInt(0);
+        return true;
+    }
+
+    result->SetValInt(CBotErrRead);
+    if (script->m_errMode != ERM_STOP) return true;
+    exception = CBotErrRead;
+    return false;
+}
+
+void CScriptFunctions::InitFunctions(CBot::CBotContext& context)
+{
+    auto AddFunction = [&context](const std::string& name, CBot::DefaultRuntimeFunc rExec, CBot::DefaultCompileFunc cComp)
+    {
+        if (!context.AddFunction(name, rExec, cComp))
+            GetLogger()->Error("Function '%s()' redefined", name.c_str());
+    };
+
+    AddFunction("deletefile", rDeleteFile, cString);
+
+    AddFunction("endmission", rEndMission, cEndMission);
+    AddFunction("playmusic",  rPlayMusic , cPlayMusic);
+    AddFunction("stopmusic",  rStopMusic , cNull);
+
+    AddFunction("getbuild",          rGetBuild,          cNull);
+    AddFunction("getresearchenable", rGetResearchEnable, cNull);
+    AddFunction("getresearchdone",   rGetResearchDone,   cNull);
+    AddFunction("setbuild",          rSetBuild,          cOneInt);
+    AddFunction("setresearchenable", rSetResearchEnable, cOneInt);
+    AddFunction("setresearchdone",   rSetResearchDone,   cOneInt);
+
+    AddFunction("canbuild",        rCanBuild,        cOneIntReturnBool);
+    AddFunction("canresearch",     rCanResearch,     cOneIntReturnBool);
+    AddFunction("researched",      rResearched,      cOneIntReturnBool);
+    AddFunction("buildingenabled", rBuildingEnabled, cOneIntReturnBool);
+
+    AddFunction("build",           rBuild,           cOneInt);
+    AddFunction("flag",            rFlag,            cGrabDrop);
+    AddFunction("deflag",          rDeflag,          cNull);
+
+    AddFunction("retobject", rGetObject, cGetObject);
+    AddFunction("retobjectbyid", rGetObjectById, cGetObject);
+    AddFunction("delete",    rDelete,    cDelete);
+    AddFunction("search",    rSearch,    cSearch);
+    AddFunction("searchall", rSearchAll, cSearchAll);
+    AddFunction("radar",     rRadar,     cRadar);
+    AddFunction("radarall",  rRadarAll,  cRadarAll);
+    AddFunction("detect",    rDetect,    cDetect);
+    AddFunction("direction", rDirection, cDirection);
+    AddFunction("produce",   rProduce,   cProduce);
+    AddFunction("distance",  rDistance,  cDistance);
+    AddFunction("distance2d",rDistance2d,cDistance);
+    AddFunction("space",     rSpace,     cSpace);
+    AddFunction("flatspace", rFlatSpace, cFlatSpace);
+    AddFunction("flatground",rFlatGround,cFlatGround);
+    AddFunction("wait",      rWait,      cOneFloat);
+    AddFunction("move",      rMove,      cOneFloat);
+    AddFunction("turn",      rTurn,      cOneFloat);
+    AddFunction("goto",      rGoto,      cGoto);
+    AddFunction("grab",      rGrab,      cGrabDrop);
+    AddFunction("drop",      rDrop,      cGrabDrop);
+    AddFunction("sniff",     rSniff,     cNull);
+    AddFunction("receive",   rReceive,   cReceive);
+    AddFunction("send",      rSend,      cSend);
+    AddFunction("deleteinfo",rDeleteInfo,cDeleteInfo);
+    AddFunction("testinfo",  rTestInfo,  cTestInfo);
+    AddFunction("thump",     rThump,     cNull);
+    AddFunction("recycle",   rRecycle,   cNull);
+    AddFunction("shield",    rShield,    cShield);
+    AddFunction("fire",      rFire,      cFire);
+    AddFunction("aim",       rAim,       cAim);
+    AddFunction("motor",     rMotor,     cMotor);
+    AddFunction("jet",       rJet,       cOneFloat);
+    AddFunction("topo",      rTopo,      cTopo);
+    AddFunction("message",   rMessage,   cMessage);
+    AddFunction("cmdline",   rCmdline,   cOneFloat);
+    AddFunction("ismovie",   rIsMovie,   cNull);
+    AddFunction("errmode",   rErrMode,   cOneFloat);
+    AddFunction("ipf",       rIPF,       cOneFloat);
+    AddFunction("abstime",   rAbsTime,   cNull);
+    AddFunction("pendown",   rPenDown,   cPenDown);
+    AddFunction("penup",     rPenUp,     cNull);
+    AddFunction("pencolor",  rPenColor,  cOneFloat);
+    AddFunction("penwidth",  rPenWidth,  cOneFloat);
+    AddFunction("factory",   rFactory,   cFactory);
+    AddFunction("camerafocus", rCameraFocus, cCameraFocus);
+    AddFunction("takeoff",   rTakeOff,   cOneObject);
+    AddFunction("isbusy",    rIsBusy,    cIsBusy);
+    AddFunction("research",  rResearch,  cResearch);
+    AddFunction("destroy",   rDestroy,   cOneObject);
+}
+
+void CScriptFunctions::InitContextGlobal(CBot::CBotContext& globalContext)
+{
+    auto AddConstant = [&globalContext](const std::string& name, int num)
+    {
+        if (!globalContext.AddConstant<int>(name, num))
+            GetLogger()->Error("Constant '%%' redefined", name);
+    };
 
     for (int i = 0; i < OBJECT_MAX; i++)
     {
         ObjectType type = static_cast<ObjectType>(i);
         const char* token = GetObjectName(type);
         if (token[0] != 0)
-            CBotProgram::DefineNum(token, type);
+            AddConstant(token, type);
 
         token = GetObjectAlias(type);
         if (token[0] != 0)
-            CBotProgram::DefineNum(token, type);
+            AddConstant(token, type);
     }
-    CBotProgram::DefineNum("Any", OBJECT_NULL);
+    AddConstant("Any", OBJECT_NULL);
 
     for (int i = 0; i < static_cast<int>(TraceColor::Max); i++)
     {
         TraceColor color = static_cast<TraceColor>(i);
-        CBotProgram::DefineNum(TraceColorName(color).c_str(), static_cast<int>(color));
+        AddConstant(TraceColorName(color), static_cast<int>(color));
     }
 
-    CBotProgram::DefineNum("InFront",    TMA_FFRONT);
-    CBotProgram::DefineNum("Behind",     TMA_FBACK);
-    CBotProgram::DefineNum("EnergyCell", TMA_POWER);
+    AddConstant("InFront",    TMA_FFRONT);
+    AddConstant("Behind",     TMA_FBACK);
+    AddConstant("EnergyCell", TMA_POWER);
 
-    CBotProgram::DefineNum("DisplayError",   Ui::TT_ERROR);
-    CBotProgram::DefineNum("DisplayWarning", Ui::TT_WARNING);
-    CBotProgram::DefineNum("DisplayInfo",    Ui::TT_INFO);
-    CBotProgram::DefineNum("DisplayMessage", Ui::TT_MESSAGE);
+    AddConstant("DisplayError",         Ui::TT_ERROR);
+    AddConstant("DisplayWarning",       Ui::TT_WARNING);
+    AddConstant("DisplayInfo",          Ui::TT_INFO);
+    AddConstant("DisplayMessage",       Ui::TT_MESSAGE);
 
-    CBotProgram::DefineNum("FilterNone",        FILTER_NONE);
-    CBotProgram::DefineNum("FilterOnlyLanding", FILTER_ONLYLANDING);
-    CBotProgram::DefineNum("FilterOnlyFlying",  FILTER_ONLYFLYING);
-    CBotProgram::DefineNum("FilterFriendly",    FILTER_FRIENDLY);
-    CBotProgram::DefineNum("FilterEnemy",       FILTER_ENEMY);
-    CBotProgram::DefineNum("FilterNeutral",     FILTER_NEUTRAL);
+    AddConstant("FilterNone",               FILTER_NONE);
+    AddConstant("FilterOnlyLanding",        FILTER_ONLYLANDING);
+    AddConstant("FilterOnlyFlying",         FILTER_ONLYFLYING);
+    AddConstant("FilterFriendly",           FILTER_FRIENDLY);
+    AddConstant("FilterEnemy",              FILTER_ENEMY);
+    AddConstant("FilterNeutral",            FILTER_NEUTRAL);
 
-    CBotProgram::DefineNum("DestructionNone",           static_cast<int>(DestructionType::NoEffect));
-    CBotProgram::DefineNum("DestructionExplosion",      static_cast<int>(DestructionType::Explosion));
-    CBotProgram::DefineNum("DestructionExplosionWater", static_cast<int>(DestructionType::ExplosionWater));
-    CBotProgram::DefineNum("DestructionBurn",           static_cast<int>(DestructionType::Burn));
-    CBotProgram::DefineNum("DestructionDrowned",        static_cast<int>(DestructionType::Drowned));
+    AddConstant("DestructionNone",           static_cast<int>(DestructionType::NoEffect));
+    AddConstant("DestructionExplosion",      static_cast<int>(DestructionType::Explosion));
+    AddConstant("DestructionExplosionWater", static_cast<int>(DestructionType::ExplosionWater));
+    AddConstant("DestructionBurn",           static_cast<int>(DestructionType::Burn));
+    AddConstant("DestructionDrowned",        static_cast<int>(DestructionType::Drowned));
 
-    CBotProgram::DefineNum("ResultNotEnded",  ERR_MISSION_NOTERM);
-    CBotProgram::DefineNum("ResultLost",      INFO_LOST);
-    CBotProgram::DefineNum("ResultLostQuick", INFO_LOSTq);
-    CBotProgram::DefineNum("ResultWin",       ERR_OK);
+    AddConstant("ResultNotEnded",       ERR_MISSION_NOTERM);
+    AddConstant("ResultLost",           INFO_LOST);
+    AddConstant("ResultLostQuick",      INFO_LOSTq);
+    AddConstant("ResultWin",            ERR_OK);
 
     // NOTE: The Build___ constants are for use only with getbuild() and setbuild() for MissionController, not for normal players
-    CBotProgram::DefineNum("BuildBotFactory",       BUILD_FACTORY);
-    CBotProgram::DefineNum("BuildDerrick",          BUILD_DERRICK);
-    CBotProgram::DefineNum("BuildConverter",        BUILD_CONVERT);
-    CBotProgram::DefineNum("BuildRadarStation",     BUILD_RADAR);
-    CBotProgram::DefineNum("BuildPowerPlant",       BUILD_ENERGY);
-    CBotProgram::DefineNum("BuildNuclearPlant",     BUILD_NUCLEAR);
-    CBotProgram::DefineNum("BuildPowerStation",     BUILD_STATION);
-    CBotProgram::DefineNum("BuildRepairCenter",     BUILD_REPAIR);
-    CBotProgram::DefineNum("BuildDefenseTower",     BUILD_TOWER);
-    CBotProgram::DefineNum("BuildResearchCenter",   BUILD_RESEARCH);
-    CBotProgram::DefineNum("BuildAutoLab",          BUILD_LABO);
-    CBotProgram::DefineNum("BuildPowerCaptor",      BUILD_PARA);
-    CBotProgram::DefineNum("BuildExchangePost",     BUILD_INFO);
-    CBotProgram::DefineNum("BuildVault",            BUILD_SAFE);
-    CBotProgram::DefineNum("BuildDestroyer",        BUILD_DESTROYER);
-    CBotProgram::DefineNum("FlatGround",            BUILD_GFLAT);
-    CBotProgram::DefineNum("UseFlags",              BUILD_FLAG);
+    AddConstant("BuildBotFactory",              BUILD_FACTORY);
+    AddConstant("BuildDerrick",                 BUILD_DERRICK);
+    AddConstant("BuildConverter",               BUILD_CONVERT);
+    AddConstant("BuildRadarStation",            BUILD_RADAR);
+    AddConstant("BuildPowerPlant",              BUILD_ENERGY);
+    AddConstant("BuildNuclearPlant",            BUILD_NUCLEAR);
+    AddConstant("BuildPowerStation",            BUILD_STATION);
+    AddConstant("BuildRepairCenter",            BUILD_REPAIR);
+    AddConstant("BuildDefenseTower",            BUILD_TOWER);
+    AddConstant("BuildResearchCenter",          BUILD_RESEARCH);
+    AddConstant("BuildAutoLab",                 BUILD_LABO);
+    AddConstant("BuildPowerCaptor",             BUILD_PARA);
+    AddConstant("BuildExchangePost",            BUILD_INFO);
+    AddConstant("BuildVault",                   BUILD_SAFE);
+    AddConstant("BuildDestroyer",               BUILD_DESTROYER);
+    AddConstant("FlatGround",                   BUILD_GFLAT);
+    AddConstant("UseFlags",                     BUILD_FLAG);
 
-    CBotProgram::DefineNum("ResearchTracked",       RESEARCH_TANK);
-    CBotProgram::DefineNum("ResearchWinged",        RESEARCH_FLY);
-    CBotProgram::DefineNum("ResearchShooter",       RESEARCH_CANON);
-    CBotProgram::DefineNum("ResearchDefenseTower",  RESEARCH_TOWER);
-    CBotProgram::DefineNum("ResearchNuclearPlant",  RESEARCH_ATOMIC);
-    CBotProgram::DefineNum("ResearchThumper",       RESEARCH_THUMP);
-    CBotProgram::DefineNum("ResearchShielder",      RESEARCH_SHIELD);
-    CBotProgram::DefineNum("ResearchPhazerShooter", RESEARCH_PHAZER);
-    CBotProgram::DefineNum("ResearchLegged",        RESEARCH_iPAW);
-    CBotProgram::DefineNum("ResearchOrgaShooter",   RESEARCH_iGUN);
-    CBotProgram::DefineNum("ResearchRecycler",      RESEARCH_RECYCLER);
-    CBotProgram::DefineNum("ResearchSubber",        RESEARCH_SUBM);
-    CBotProgram::DefineNum("ResearchSniffer",       RESEARCH_SNIFFER);
-    CBotProgram::DefineNum("ResearchBuilder",       RESEARCH_BUILDER);
-    CBotProgram::DefineNum("ResearchTarget",        RESEARCH_TARGET);
+    AddConstant("ResearchTracked",              RESEARCH_TANK);
+    AddConstant("ResearchWinged",               RESEARCH_FLY);
+    AddConstant("ResearchShooter",              RESEARCH_CANON);
+    AddConstant("ResearchDefenseTower",         RESEARCH_TOWER);
+    AddConstant("ResearchNuclearPlant",         RESEARCH_ATOMIC);
+    AddConstant("ResearchThumper",              RESEARCH_THUMP);
+    AddConstant("ResearchShielder",             RESEARCH_SHIELD);
+    AddConstant("ResearchPhazerShooter",        RESEARCH_PHAZER);
+    AddConstant("ResearchLegged",               RESEARCH_iPAW);
+    AddConstant("ResearchOrgaShooter",          RESEARCH_iGUN);
+    AddConstant("ResearchRecycler",             RESEARCH_RECYCLER);
+    AddConstant("ResearchSubber",               RESEARCH_SUBM);
+    AddConstant("ResearchSniffer",              RESEARCH_SNIFFER);
+    AddConstant("ResearchBuilder",              RESEARCH_BUILDER);
+    AddConstant("ResearchTarget",               RESEARCH_TARGET);
 
-    CBotProgram::DefineNum("CameraDefault",         static_cast<int>(CameraView::DEFAULT));
-    CBotProgram::DefineNum("CameraOnboard",         static_cast<int>(CameraView::ONBOARD));
-    CBotProgram::DefineNum("CameraBack",            static_cast<int>(CameraView::BACK));
+    AddConstant("CameraDefault", static_cast<int>(CameraView::DEFAULT));
+    AddConstant("CameraOnboard", static_cast<int>(CameraView::ONBOARD));
+    AddConstant("CameraBack",    static_cast<int>(CameraView::BACK));
 
-    CBotProgram::DefineNum("PolskiPortalColobota", 1337);
+    AddConstant("PolskiPortalColobota", 1337);
 
-    CBotClass* bc;
+    // Find the class Point.
+    auto pnt = globalContext.FindClass("point");
 
-    // Add the class Point.
-    bc = CBotClass::Create("point", nullptr, true);  // intrinsic class
-    bc->AddItem("x", CBotTypFloat);
-    bc->AddItem("y", CBotTypFloat);
-    bc->AddItem("z", CBotTypFloat);
-    bc->AddFunction("point", rPointConstructor, cPointConstructor);
+    const auto protectReadOnly = CBotVar::ProtectionLevel::ReadOnly;
 
-    // Adds the class Object.
-    bc = CBotClass::Create("object", nullptr);
-    bc->AddItem("category",    CBotTypResult(CBotTypInt), CBotVar::ProtectionLevel::ReadOnly);
-    bc->AddItem("position",    CBotTypResult(CBotTypClass, "point"), CBotVar::ProtectionLevel::ReadOnly);
-    bc->AddItem("orientation", CBotTypResult(CBotTypFloat), CBotVar::ProtectionLevel::ReadOnly);
-    bc->AddItem("pitch",       CBotTypResult(CBotTypFloat), CBotVar::ProtectionLevel::ReadOnly);
-    bc->AddItem("roll",        CBotTypResult(CBotTypFloat), CBotVar::ProtectionLevel::ReadOnly);
-    bc->AddItem("energyLevel", CBotTypResult(CBotTypFloat), CBotVar::ProtectionLevel::ReadOnly);
-    bc->AddItem("shieldLevel", CBotTypResult(CBotTypFloat), CBotVar::ProtectionLevel::ReadOnly);
-    bc->AddItem("temperature", CBotTypResult(CBotTypFloat), CBotVar::ProtectionLevel::ReadOnly);
-    bc->AddItem("altitude",    CBotTypResult(CBotTypFloat), CBotVar::ProtectionLevel::ReadOnly);
-    bc->AddItem("lifeTime",    CBotTypResult(CBotTypFloat), CBotVar::ProtectionLevel::ReadOnly);
-    bc->AddItem("energyCell",  CBotTypResult(CBotTypPointer, "object"), CBotVar::ProtectionLevel::ReadOnly);
-    bc->AddItem("load",        CBotTypResult(CBotTypPointer, "object"), CBotVar::ProtectionLevel::ReadOnly);
-    bc->AddItem("id",          CBotTypResult(CBotTypInt), CBotVar::ProtectionLevel::ReadOnly);
-    bc->AddItem("team",        CBotTypResult(CBotTypInt), CBotVar::ProtectionLevel::ReadOnly);
-    bc->AddItem("dead",        CBotTypResult(CBotTypBoolean), CBotVar::ProtectionLevel::ReadOnly);
-    bc->AddItem("velocity",    CBotTypResult(CBotTypClass, "point"), CBotVar::ProtectionLevel::ReadOnly);
+    auto bc = globalContext.CreateClass("object", nullptr);
+    bc->AddItem("category",    { CBotTypInt }, protectReadOnly);
+    bc->AddItem("position",    { CBotTypClass, pnt }, protectReadOnly);
+    bc->AddItem("orientation", { CBotTypFloat }, protectReadOnly);
+    bc->AddItem("pitch",       { CBotTypFloat }, protectReadOnly);
+    bc->AddItem("roll",        { CBotTypFloat }, protectReadOnly);
+    bc->AddItem("energyLevel", { CBotTypFloat }, protectReadOnly);
+    bc->AddItem("shieldLevel", { CBotTypFloat }, protectReadOnly);
+    bc->AddItem("temperature", { CBotTypFloat }, protectReadOnly);
+    bc->AddItem("altitude",    { CBotTypFloat }, protectReadOnly);
+    bc->AddItem("lifeTime",    { CBotTypFloat }, protectReadOnly);
+    bc->AddItem("energyCell",  { CBotTypPointer, bc }, protectReadOnly);
+    bc->AddItem("load",        { CBotTypPointer, bc }, protectReadOnly);
+    bc->AddItem("id",          { CBotTypInt }, protectReadOnly);
+    bc->AddItem("team",        { CBotTypInt }, protectReadOnly);
+    bc->AddItem("dead",        { CBotTypBoolean }, protectReadOnly);
+    bc->AddItem("velocity",    { CBotTypClass, pnt }, protectReadOnly);
+    bc->SetUpdateFunc(CScriptFunctions::uObject);
 
-    CBotProgram::AddFunction("endmission",rEndMission,cEndMission);
-    CBotProgram::AddFunction("playmusic", rPlayMusic ,cPlayMusic);
-    CBotProgram::AddFunction("stopmusic", rStopMusic ,cNull);
-
-    CBotProgram::AddFunction("getbuild",          rGetBuild,          cNull);
-    CBotProgram::AddFunction("getresearchenable", rGetResearchEnable, cNull);
-    CBotProgram::AddFunction("getresearchdone",   rGetResearchDone,   cNull);
-    CBotProgram::AddFunction("setbuild",          rSetBuild,          cOneInt);
-    CBotProgram::AddFunction("setresearchenable", rSetResearchEnable, cOneInt);
-    CBotProgram::AddFunction("setresearchdone",   rSetResearchDone,   cOneInt);
-
-    CBotProgram::AddFunction("canbuild",        rCanBuild,        cOneIntReturnBool);
-    CBotProgram::AddFunction("canresearch",     rCanResearch,     cOneIntReturnBool);
-    CBotProgram::AddFunction("researched",      rResearched,      cOneIntReturnBool);
-    CBotProgram::AddFunction("buildingenabled", rBuildingEnabled, cOneIntReturnBool);
-
-    CBotProgram::AddFunction("build",           rBuild,           cOneInt);
-    CBotProgram::AddFunction("flag",            rFlag,            cGrabDrop);
-    CBotProgram::AddFunction("deflag",          rDeflag,          cNull);
-
-    CBotProgram::AddFunction("retobject", rGetObject, cGetObject);
-    CBotProgram::AddFunction("retobjectbyid", rGetObjectById, cGetObject);
-    CBotProgram::AddFunction("delete",    rDelete,    cDelete);
-    CBotProgram::AddFunction("search",    rSearch,    cSearch);
-    CBotProgram::AddFunction("searchall", rSearchAll, cSearchAll);
-    CBotProgram::AddFunction("radar",     rRadar,     cRadar);
-    CBotProgram::AddFunction("radarall",  rRadarAll,  cRadarAll);
-    CBotProgram::AddFunction("detect",    rDetect,    cDetect);
-    CBotProgram::AddFunction("direction", rDirection, cDirection);
-    CBotProgram::AddFunction("produce",   rProduce,   cProduce);
-    CBotProgram::AddFunction("distance",  rDistance,  cDistance);
-    CBotProgram::AddFunction("distance2d",rDistance2d,cDistance);
-    CBotProgram::AddFunction("space",     rSpace,     cSpace);
-    CBotProgram::AddFunction("flatspace", rFlatSpace, cFlatSpace);
-    CBotProgram::AddFunction("flatground",rFlatGround,cFlatGround);
-    CBotProgram::AddFunction("wait",      rWait,      cOneFloat);
-    CBotProgram::AddFunction("move",      rMove,      cOneFloat);
-    CBotProgram::AddFunction("turn",      rTurn,      cOneFloat);
-    CBotProgram::AddFunction("goto",      rGoto,      cGoto);
-    CBotProgram::AddFunction("grab",      rGrab,      cGrabDrop);
-    CBotProgram::AddFunction("drop",      rDrop,      cGrabDrop);
-    CBotProgram::AddFunction("sniff",     rSniff,     cNull);
-    CBotProgram::AddFunction("receive",   rReceive,   cReceive);
-    CBotProgram::AddFunction("send",      rSend,      cSend);
-    CBotProgram::AddFunction("deleteinfo",rDeleteInfo,cDeleteInfo);
-    CBotProgram::AddFunction("testinfo",  rTestInfo,  cTestInfo);
-    CBotProgram::AddFunction("thump",     rThump,     cNull);
-    CBotProgram::AddFunction("recycle",   rRecycle,   cNull);
-    CBotProgram::AddFunction("shield",    rShield,    cShield);
-    CBotProgram::AddFunction("fire",      rFire,      cFire);
-    CBotProgram::AddFunction("aim",       rAim,       cAim);
-    CBotProgram::AddFunction("motor",     rMotor,     cMotor);
-    CBotProgram::AddFunction("jet",       rJet,       cOneFloat);
-    CBotProgram::AddFunction("topo",      rTopo,      cTopo);
-    CBotProgram::AddFunction("message",   rMessage,   cMessage);
-    CBotProgram::AddFunction("cmdline",   rCmdline,   cOneFloat);
-    CBotProgram::AddFunction("ismovie",   rIsMovie,   cNull);
-    CBotProgram::AddFunction("errmode",   rErrMode,   cOneFloat);
-    CBotProgram::AddFunction("ipf",       rIPF,       cOneFloat);
-    CBotProgram::AddFunction("abstime",   rAbsTime,   cNull);
-    CBotProgram::AddFunction("pendown",   rPenDown,   cPenDown);
-    CBotProgram::AddFunction("penup",     rPenUp,     cNull);
-    CBotProgram::AddFunction("pencolor",  rPenColor,  cOneFloat);
-    CBotProgram::AddFunction("penwidth",  rPenWidth,  cOneFloat);
-    CBotProgram::AddFunction("factory",   rFactory,   cFactory);
-    CBotProgram::AddFunction("camerafocus", rCameraFocus, cCameraFocus);
-    CBotProgram::AddFunction("takeoff",   rTakeOff,   cOneObject);
-    CBotProgram::AddFunction("isbusy",    rIsBusy,    cIsBusy);
-    CBotProgram::AddFunction("research",  rResearch,  cResearch);
-    CBotProgram::AddFunction("destroy",   rDestroy,   cOneObject);
-
-    SetFileAccessHandler(std::make_unique<CBotFileAccessHandlerColobot>());
+    globalContext.SetFileAccessHandler(std::make_unique<CBotFileAccessHandlerColobot>());
+    globalContext.AddFunction("deletefile", rDeleteFile, cString);
 }
-
 
 // Updates the class Object.
 
@@ -3783,7 +3774,7 @@ void CScriptFunctions::uObject(CBotVar* botThis, void* user)
         }
         else if (power->Implements(ObjectInterfaceType::Old))
         {
-            pVar->SetPointer(power->GetBotVar());
+            pVar->SetPointer( power->GetBotVar()->GetPointer() );
         }
     }
 
@@ -3798,7 +3789,7 @@ void CScriptFunctions::uObject(CBotVar* botThis, void* user)
         }
         else if (cargo->Implements(ObjectInterfaceType::Old))
         {
-            pVar->SetPointer(cargo->GetBotVar());
+            pVar->SetPointer( cargo->GetBotVar()->GetPointer() );
         }
     }
 
@@ -3852,15 +3843,12 @@ void CScriptFunctions::uObject(CBotVar* botThis, void* user)
 
 CBotVar* CScriptFunctions::CreateObjectVar(CObject* obj)
 {
-    CBotClass* bc = CBotClass::Find("object");
-    if ( bc != nullptr )
-    {
-        bc->SetUpdateFunc(CScriptFunctions::uObject);
-    }
+    const auto& context = CRobotMain::GetInstancePointer()->GetCBotContextGlobal();
+    auto pClass = context->FindClass("object");
+    pClass->SetUpdateFunc(CScriptFunctions::uObject);
 
-    CBotVar* botVar = CBotVar::Create("", CBotTypResult(CBotTypClass, "object"));
-    botVar->SetUserPtr(obj);
-    botVar->SetIdent(obj->GetID());
+    CBotVar* botVar = CBotVar::Create("", CBotTypResult(CBotTypClass, pClass));
+    botVar->SetUserPointer(CBotUserPointer::Create(obj));
     return botVar;
 }
 
@@ -3868,7 +3856,10 @@ void CScriptFunctions::DestroyObjectVar(CBotVar* botVar, bool permanent)
 {
     if ( botVar == nullptr ) return;
 
-    botVar->SetUserPtr(OBJECTDELETED);
+    if (const auto& user = botVar->GetUserPointer())
+    {
+        user->SetPointerAs(nullptr);
+    }
     if (permanent)
         CBotVar::Destroy(botVar);
 }

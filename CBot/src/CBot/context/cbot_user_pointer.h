@@ -17,20 +17,38 @@
  * along with this program. If not, see http://gnu.org/licenses
  */
 
-/*!
- * \file CBot.h
- * \brief Public interface of CBot language interpreter. CBot.h is the only file
- * that should be included by any Colobot files outside of the CBot module.
- */
+#pragma once
 
-#include "CBot/CBotFileUtils.h"
-#include "CBot/CBotClass.h"
-#include "CBot/CBotToken.h"
-#include "CBot/CBotProgram.h"
-#include "CBot/CBotTypResult.h"
 
-#include "CBot/CBotVar/CBotVar.h"
+#include <memory>
 
-#include "CBot/context/cbot_context.h"
+namespace CBot
+{
 
-#include "CBot/stdlib/stdlib_public.h"
+class CBotUserPointer
+{
+public:
+
+    CBotUserPointer() : m_userPtr(nullptr) {}
+    CBotUserPointer(void* user) :  m_userPtr(user) {}
+
+    static std::unique_ptr<CBotUserPointer> Create()
+    {
+        return std::make_unique<CBotUserPointer>();
+    }
+
+    static std::unique_ptr<CBotUserPointer> Create(void* user)
+    {
+        return std::make_unique<CBotUserPointer>(user);
+    }
+
+    void SetPointerAs(void* user) { m_userPtr = user; }
+
+    template<typename T>
+    T* GetPointerAs() { return static_cast<T*>(m_userPtr); }
+
+private:
+    void* m_userPtr;
+};
+
+} // namespace CBot

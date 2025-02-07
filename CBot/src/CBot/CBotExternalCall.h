@@ -23,9 +23,9 @@
 #include "CBot/CBotEnums.h"
 #include "CBot/CBotDefines.h"
 
-#include <string>
 #include <map>
 #include <memory>
+#include <string>
 
 namespace CBot
 {
@@ -35,6 +35,12 @@ class CBotCStack;
 class CBotVar;
 class CBotTypResult;
 class CBotToken;
+
+using DefaultRuntimeFunc = bool (*)(CBotVar* args, CBotVar* result, int& exception, void* user);
+using DefaultCompileFunc = CBotTypResult (*)(CBotVar*& args, void* user);
+
+using ClassRuntimeFunc = bool (*)(CBotVar* pThis, CBotVar* pVar, CBotVar* pResult, int& Exception, void* user);
+using ClassCompileFunc = CBotTypResult (*)(CBotVar* pThis, CBotVar*& pVar);
 
 /**
  * \brief Interface for external CBot calls
@@ -81,8 +87,6 @@ public:
 class CBotExternalCallDefault : public CBotExternalCall
 {
 public:
-    typedef bool (*RuntimeFunc)(CBotVar* args, CBotVar* result, int& exception, void* user);
-    typedef CBotTypResult (*CompileFunc)(CBotVar*& args, void* user);
 
     /**
      * \brief Constructor
@@ -90,7 +94,7 @@ public:
      * \param rCompile Compilation function
      * \see CBotProgram::AddFunction()
      */
-    CBotExternalCallDefault(RuntimeFunc rExec, CompileFunc rCompile);
+    CBotExternalCallDefault(DefaultRuntimeFunc rExec, DefaultCompileFunc rCompile);
 
     /**
      * \brief Destructor
@@ -101,8 +105,8 @@ public:
     virtual bool Run(CBotVar* thisVar, CBotStack* pStack) override;
 
 private:
-    RuntimeFunc m_rExec;
-    CompileFunc m_rComp;
+    DefaultRuntimeFunc m_rExec;
+    DefaultCompileFunc m_rComp;
 };
 
 /**
@@ -111,8 +115,6 @@ private:
 class CBotExternalCallClass : public CBotExternalCall
 {
 public:
-    typedef bool (*RuntimeFunc)(CBotVar* pThis, CBotVar* pVar, CBotVar* pResult, int& Exception, void* user);
-    typedef CBotTypResult (*CompileFunc)(CBotVar* pThis, CBotVar*& pVar);
 
     /**
      * \brief Constructor
@@ -120,7 +122,7 @@ public:
      * \param rCompile Compilation function
      * \see CBotProgram::AddFunction()
      */
-    CBotExternalCallClass(RuntimeFunc rExec, CompileFunc rCompile);
+    CBotExternalCallClass(ClassRuntimeFunc rExec, ClassCompileFunc rCompile);
 
     /**
      * \brief Destructor
@@ -131,8 +133,8 @@ public:
     virtual bool Run(CBotVar* thisVar, CBotStack* pStack) override;
 
 private:
-    RuntimeFunc m_rExec;
-    CompileFunc m_rComp;
+    ClassRuntimeFunc m_rExec;
+    ClassCompileFunc m_rComp;
 };
 
 
@@ -144,13 +146,14 @@ private:
 class CBotExternalCallList
 {
 public:
-    /**
-     * \brief Add a new function to the list
-     * \param name Function name
-     * \param call Function to add
-     * \return true
-     */
-    bool AddFunction(const std::string& name, std::unique_ptr<CBotExternalCall> call);
+
+    bool AddFunction(const std::string& name,
+                     DefaultRuntimeFunc rExec,
+                     DefaultCompileFunc cCompile);
+
+    bool AddFunction(const std::string& name,
+                     ClassRuntimeFunc rExec,
+                     ClassCompileFunc cCompile);
 
     /**
      * \brief Find and call compile function

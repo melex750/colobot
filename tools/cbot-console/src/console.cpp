@@ -63,8 +63,8 @@ int main(int argc, char* argv[])
     }
 
     // Initialize the CBot engine, add standard library functions
-    CBotProgram::Init();
-    CBotProgram::AddFunction("message", rMessage, cMessage);
+    auto context = CBotContext::CreateGlobalContext();
+    context->AddFunction("message", rMessage, cMessage);
 
     // Error message strings are stored on Colobot side (meh!) so let's initialize that
     InitializeRestext();
@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
 
     // Compile the program
     std::vector<std::string> externFunctions;
-    std::unique_ptr<CBotProgram> program{new CBotProgram(nullptr)};
+    auto program = std::make_unique<CBotProgram>(context);
     if (!program->Compile(code.c_str(), externFunctions, nullptr))
     {
         CBotError error;

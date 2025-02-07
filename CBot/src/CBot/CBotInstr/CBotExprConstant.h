@@ -19,44 +19,52 @@
 
 #pragma once
 
-#include "CBot/CBotVar/CBotVar.h"
+#include "CBot/CBotInstr/CBotInstr.h"
+
+#include "CBot/CBotTypResult.h"
 
 namespace CBot
 {
 
+
+CBotInstr* CompileExprConstant(CBotToken* &p, CBotCStack* pStack);
 /**
- * \brief CBotVar subclass for managing arrays (::CBotTypArrayPointer)
+ * \brief A predefined constant (see CBotListConstant::AddConstant())
  *
- * Uses CBotVarClass for storing data internally
+ * Can be of type:
+ * ::CBotTypByte
+ * ::CBotTypShort
+ * ::CBotTypChar
+ * ::CBotTypInt
+ * ::CBotTypLong
+ * ::CBotTypFloat
+ * ::CBotTypDouble
+ * ::CBotTypString
  */
-class CBotVarArray : public CBotVar
+template<typename T>
+class CBotExprConstant : public CBotInstr
 {
+
 public:
-    /**
-     * \brief Constructor. Do not call directly, use CBotVar::Create()
-     */
-    CBotVarArray(const CBotToken& name, CBotTypResult& type);
-    /**
-     * \brief Destructor. Do not call directly, use CBotVar::Destroy()
-     */
-    ~CBotVarArray();
+    CBotExprConstant(T val)
+    {
+        static_assert(sizeof(T) == 0, "Only specializations of CBotExprConstant can be used");
+    }
 
-    void SetPointer(const CBotVarSPtr& p) override;
-    CBotVarSPtr GetPointer() override;
-    bool PointerIsUnique() const override;
+    ~CBotExprConstant();
 
-    void Copy(CBotVar* pSrc, bool bName = true) override;
+    bool Execute(CBotStack* &pj) override;
 
-    CBotVar* GetItem(int n, bool grow = false) override;
-    CBotVar* GetItemList() override;
+    void RestoreState(CBotStack* &pj, bool bMain) override;
 
-    std::string GetValString() const override;
-
-    bool Save1State(std::ostream &ostr, CBotContext& context) override;
+protected:
+    virtual const std::string GetDebugName() override { return "CBotExprConstant"; }
+    virtual std::string GetDebugData() override;
 
 private:
-    //! Array data
-    CBotVarSPtr m_pInstance;
+    CBotTypResult m_type;
+    //! Value
+    const T m_value;
 };
 
 } // namespace CBot

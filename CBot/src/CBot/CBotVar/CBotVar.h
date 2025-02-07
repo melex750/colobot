@@ -25,15 +25,22 @@
 #include "CBot/CBotUtils.h"
 
 #include <cstdint>
+#include <memory>
 #include <string>
 
 namespace CBot
 {
 
-class CBotVarClass;
-class CBotInstr;
 class CBotClass;
+class CBotContext;
+class CBotInstr;
 class CBotToken;
+class CBotUserPointer;
+class CBotVar;
+class CBotVarClass;
+
+using CBotVarSPtr = std::shared_ptr<CBotVar>;
+using CBotVarUPtr = std::unique_ptr<CBotVar>;
 
 /**
  * \brief A CBot variable
@@ -89,10 +96,10 @@ public:
      * CBotVar::Create(name, CBotTypResult(type))
      * \endcode
      *
-     * \param name Variable name token
+     * \param n Variable name
      * \param type Variable type
      */
-    static CBotVar* Create(const CBotToken& name, CBotType type);
+    static CBotVar* Create(const std::string& n, CBotType type);
 
     /**
      * \brief Create a new variable of a given type described by CBotTypResult
@@ -135,31 +142,20 @@ public:
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    /**
-     * \brief Associates an unique identifier to class instance
-     *
-     * Used only by classes
-     *
-     * \param UniqId New unique identifier
-     * \see SetUniqNum() for another identifier, used for all variable types
-     */
-    virtual void SetIdent(long UniqId);
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //! \name User pointer
     //@{
 
     /**
      * \brief Set a custom pointer associated with this variable
-     * \param pUser custom pointer to set
+     * \param user custom pointer to set
      */
-    void SetUserPtr(void* pUser);
+    virtual void SetUserPointer(std::unique_ptr<CBotUserPointer> user);
 
     /**
      * \brief Returns the custom pointer associated with this variable
-     * \return A pointer set with SetUserPtr()
+     * \return A pointer set with SetUserPointer()
      */
-    void* GetUserPtr();
+    virtual const std::unique_ptr<CBotUserPointer>& GetUserPointer();
 
     //@}
 
@@ -361,10 +357,9 @@ public:
     /**
      * \brief Call the class update function
      *
-     * \param pUser User pointer to pass to the update function
      * \see CBotClass::SetUpdateFunc()
      */
-    virtual void Update(void* pUser);
+    virtual void Update();
 
     /**
      * \brief Set unique identifier of this variable
@@ -442,6 +437,7 @@ public:
     operator signed char();
     operator short();
     operator uint32_t();
+    operator char32_t();
     operator int();
     operator long();
     operator float();
@@ -451,6 +447,7 @@ public:
     void operator=(signed char x);
     void operator=(short x);
     void operator=(uint32_t x);
+    void operator=(char32_t x);
     void operator=(int x);
     void operator=(long x);
     void operator=(float x);
@@ -539,13 +536,19 @@ public:
      * \brief Set value for pointer types
      * \param p Variable to point to
      */
-    virtual void SetPointer(CBotVar* p);
+    virtual void SetPointer(const CBotVarSPtr& p);
 
     /**
      * \brief Get value for pointer types
      * \return Variable that this variable points to
      */
-    virtual CBotVarClass* GetPointer();
+    virtual CBotVarSPtr GetPointer();
+
+    /**
+     * \brief Test if this pointers use count equals one.
+     * \return true if the pointer is unique.
+     */
+    virtual bool PointerIsUnique() const;
 
     //@}
 
@@ -661,15 +664,15 @@ public:
      * \param ostr Output stream
      * \return false on write error
      */
-    virtual bool Save1State(std::ostream &ostr);
+    virtual bool Save1State(std::ostream &ostr, CBotContext& context);
 
     /**
      * \brief Restore variable
      * \param istr Input stream
-     * \param[out] pVar Pointer to recieve the variable
+     * \param outVar[out] Pointer to recieve the variable
      * \return false on read error
      */
-    static bool RestoreState(std::istream &istr, CBotVar* &pVar);
+    static bool RestoreVar(std::istream &istr, CBotVarUPtr& outVar, CBotContext& context);
 
     //@}
 
@@ -682,12 +685,6 @@ protected:
     InitType m_binit;
     //! Corresponding this element (TODO: ?)
     CBotVarClass* m_pMyThis;
-    //! User pointer if specified
-    /**
-     * \see SetUserPtr()
-     * \see GetUserPtr()
-     */
-    void* m_pUserPtr;
     //! true if the variable is static (for classes)
     bool m_bStatic;
     //! Element protection level - public, protected or private (for classes)

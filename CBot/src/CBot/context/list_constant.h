@@ -19,44 +19,46 @@
 
 #pragma once
 
-#include "CBot/CBotVar/CBotVar.h"
+#include <memory>
+#include <string>
+#include <unordered_map>
 
 namespace CBot
 {
 
-/**
- * \brief CBotVar subclass for managing arrays (::CBotTypArrayPointer)
- *
- * Uses CBotVarClass for storing data internally
- */
-class CBotVarArray : public CBotVar
+class CBotVar;
+
+using CBotVarUPtr = std::unique_ptr<CBotVar>;
+
+class CBotListConstant
 {
 public:
-    /**
-     * \brief Constructor. Do not call directly, use CBotVar::Create()
-     */
-    CBotVarArray(const CBotToken& name, CBotTypResult& type);
-    /**
-     * \brief Destructor. Do not call directly, use CBotVar::Destroy()
-     */
-    ~CBotVarArray();
+    CBotListConstant();
 
-    void SetPointer(const CBotVarSPtr& p) override;
-    CBotVarSPtr GetPointer() override;
-    bool PointerIsUnique() const override;
+    ~CBotListConstant();
 
-    void Copy(CBotVar* pSrc, bool bName = true) override;
+    template<typename T>
+    bool AddConstant(const std::string& name, const T& value)
+    {
+        static_assert(sizeof(T) == 0, "Only specializations of AddConstant can be used");
+        return false;
+    }
 
-    CBotVar* GetItem(int n, bool grow = false) override;
-    CBotVar* GetItemList() override;
+    bool IsDefinedConstant(const std::string& name) const;
 
-    std::string GetValString() const override;
-
-    bool Save1State(std::ostream &ostr, CBotContext& context) override;
+    const CBotVarUPtr& GetDefinedConstant(const std::string& name);
 
 private:
-    //! Array data
-    CBotVarSPtr m_pInstance;
+   std::unordered_map<std::string, CBotVarUPtr> m_list;
 };
+
+template<>
+bool CBotListConstant::AddConstant<int>(const std::string& name, const int& value);
+
+template<>
+bool CBotListConstant::AddConstant<float>(const std::string& name, const float& value);
+
+template<>
+bool CBotListConstant::AddConstant<std::string>(const std::string& name, const std::string& value);
 
 } // namespace CBot

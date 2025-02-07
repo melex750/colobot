@@ -37,7 +37,7 @@ public:
         SetValLong(static_cast<unsigned long>(left->GetValLong()) >> right->GetValInt());
     }
 
-    bool Save1State(std::ostream &ostr) override
+    bool Save1State(std::ostream &ostr, CBotContext& context) override
     {
         return WriteLong(ostr, m_val);
     }

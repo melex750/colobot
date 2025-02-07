@@ -52,12 +52,11 @@ int main(int argc, char* argv[])
         code += "\n";
     }
 
-    // Initialize the CBot engine
-    CBotProgram::Init();
+    auto context = CBotContext::CreateGlobalContext();
 
     // Compile the program
     std::vector<std::string> externFunctions;
-    std::unique_ptr<CBotProgram> program{new CBotProgram(nullptr)};
+    auto program = std::make_unique<CBotProgram>(context);
     if (!program->Compile(code.c_str(), externFunctions, nullptr))
     {
         CBotError error;
@@ -80,9 +79,6 @@ int main(int argc, char* argv[])
         CBotDebug::DumpCompiledProgram(program.get());
         program->Stop();
     }
-
-    // Free the engine
-    CBotProgram::Free();
 
     return 0;
 }

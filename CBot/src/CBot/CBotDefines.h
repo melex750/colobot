@@ -26,9 +26,3 @@
 
 //! Define the current CBot version
 #define    CBOTVERSION    104
-
-// for SetUserPtr when deleting an object
-// \TODO define own types to distinct between different states of objects
-#define OBJECTDELETED (reinterpret_cast<void*>(-1))
-// value set before initialization
-#define OBJECTCREATED (reinterpret_cast<void*>(-2))

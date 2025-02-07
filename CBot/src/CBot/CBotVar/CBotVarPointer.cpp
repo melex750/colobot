@@ -25,6 +25,8 @@
 #include "CBot/CBotEnums.h"
 #include "CBot/CBotUtils.h"
 
+#include "CBot/context/cbot_user_pointer.h"
+
 #include <cassert>
 
 namespace CBot
@@ -40,7 +42,6 @@ CBotVarPointer::CBotVarPointer(const CBotToken& name, CBotTypResult& type) : CBo
 
     m_next        = nullptr;
     m_pMyThis    = nullptr;
-    m_pUserPtr    = nullptr;
 
     m_type        = type;
     if ( !type.Eq(CBotTypNullPointer) )
@@ -55,13 +56,22 @@ CBotVarPointer::CBotVarPointer(const CBotToken& name, CBotTypResult& type) : CBo
 ////////////////////////////////////////////////////////////////////////////////
 CBotVarPointer::~CBotVarPointer()
 {
-    if (m_pVarClass != nullptr) m_pVarClass->DecrementUse();    // decrement reference
 }
 
-////////////////////////////////////////////////////////////////////////////////
-void CBotVarPointer::Update(void* pUser)
+void CBotVarPointer::Update()
 {
-    if (m_pVarClass != nullptr) m_pVarClass->Update(pUser);
+    if (m_pVarClass) m_pVarClass->Update();
+}
+
+void CBotVarPointer::SetUserPointer(std::unique_ptr<CBotUserPointer> user)
+{
+    if (m_pVarClass) m_pVarClass->SetUserPointer(std::move(user));
+}
+
+const std::unique_ptr<CBotUserPointer>& CBotVarPointer::GetUserPointer()
+{
+    if (m_pVarClass) return m_pVarClass->GetUserPointer();
+    return CBotVar::GetUserPointer();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -104,61 +114,44 @@ void CBotVarPointer::ConstructorSet()
     if ( m_pVarClass != nullptr) m_pVarClass->ConstructorSet();
 }
 
-////////////////////////////////////////////////////////////////////////////////
-void CBotVarPointer::SetPointer(CBotVar* pVarClass)
+void CBotVarPointer::SetPointer(const CBotVarSPtr& pVarClass)
 {
     m_binit = CBotVar::InitType::DEF;                            // init, even on a null pointer
 
     if ( m_pVarClass == pVarClass) return;    // special, not decrement and reincrement
                                             // because the decrement can destroy the object
 
-    if ( pVarClass != nullptr )
+    if ( !pVarClass )
     {
-        if ( pVarClass->GetType() == CBotTypPointer )
-             pVarClass = pVarClass->GetPointer();    // the real pointer to the object
-
-//        if ( pVarClass->GetType() != CBotTypClass )
-        if ( !pVarClass->m_type.Eq(CBotTypClass) )
-            assert(0);
-
-        (static_cast<CBotVarClass*>(pVarClass))->IncrementUse();            // increment the reference
-        m_pClass = (static_cast<CBotVarClass*>(pVarClass))->m_pClass;
-        m_pUserPtr = pVarClass->m_pUserPtr;                    // not really necessary
-        m_type = CBotTypResult(CBotTypPointer, m_pClass);    // what kind of a pointer
+        m_pVarClass.reset();
     }
-
-    if ( m_pVarClass != nullptr ) m_pVarClass->DecrementUse();
-    m_pVarClass = static_cast<CBotVarClass*>(pVarClass);
-
+    else
+    {
+        auto instance = pVarClass; // the real pointer to the object
+        if (instance)
+        {
+            if (!instance->m_type.Eq(CBotTypClass)) assert(0);
+            m_pClass = (std::static_pointer_cast<CBotVarClass>(instance))->m_pClass;
+            m_type = CBotTypResult(CBotTypPointer, m_pClass);    // what kind of a pointer
+        }
+        m_pVarClass = instance;
+    }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-CBotVarClass* CBotVarPointer::GetPointer()
+CBotVarSPtr CBotVarPointer::GetPointer()
 {
-    if ( m_pVarClass == nullptr ) return nullptr;
-    return m_pVarClass->GetPointer();
+    return m_pVarClass;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-void CBotVarPointer::SetIdent(long n)
+bool CBotVarPointer::PointerIsUnique() const
 {
-    if ( m_pVarClass == nullptr ) return;
-    m_pVarClass->SetIdent( n );
+    return m_pVarClass.use_count() == 1;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-long CBotVarPointer::GetIdent()
-{
-    if ( m_pVarClass == nullptr ) return 0;
-    return m_pVarClass->m_ItemIdent;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 void CBotVarPointer::SetClass(CBotClass* pClass)
 {
-//    int        nIdent = 0;
     m_type.m_class = m_pClass = pClass;
-    if ( m_pVarClass != nullptr ) m_pVarClass->SetClass(pClass); //, nIdent);
+    if ( m_pVarClass ) m_pVarClass->SetClass(pClass);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -169,8 +162,7 @@ CBotClass* CBotVarPointer::GetClass()
     return    m_pClass;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-bool CBotVarPointer::Save1State(std::ostream &ostr)
+bool CBotVarPointer::Save1State(std::ostream &ostr, CBotContext& context)
 {
     if ( m_type.GetClass() != nullptr )
     {
@@ -181,10 +173,12 @@ bool CBotVarPointer::Save1State(std::ostream &ostr)
         if (!WriteString(ostr, "")) return false;
     }
 
-    if (!WriteLong(ostr, GetIdent())) return false;      // the unique reference
+    if (!m_pVarClass) return WriteWord(ostr, 0); // save nullptr
 
-    // also saves the proceedings copies
-    return SaveVars(ostr, GetPointer());
+    // save the instance
+    if (!m_pVarClass->Save0State(ostr)) return false; // common header
+    if (!m_pVarClass->Save1State(ostr, context)) return false; // saves the data or reference
+    return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -201,15 +195,11 @@ void CBotVarPointer::Copy(CBotVar* pSrc, bool bName)
 //    m_pVarClass = p->m_pVarClass;
     m_pVarClass = p->GetPointer();
 
-    if ( m_pVarClass != nullptr )
-         m_pVarClass->IncrementUse();            // incerement the reference
-
     m_pClass    = p->m_pClass;
     m_binit        = p->m_binit;
 //-    m_bStatic    = p->m_bStatic;
     m_next        = nullptr;
     m_pMyThis    = nullptr;//p->m_pMyThis;
-    m_pUserPtr    = p->m_pUserPtr;
 
     // keeps indentificator the same (by default)
     if (m_ident == 0 ) m_ident     = p->m_ident;
@@ -218,24 +208,48 @@ void CBotVarPointer::Copy(CBotVar* pSrc, bool bName)
 ////////////////////////////////////////////////////////////////////////////////
 bool CBotVarPointer::Eq(CBotVar* left, CBotVar* right)
 {
-    CBotVarClass*    l = left->GetPointer();
-    CBotVarClass*    r = right->GetPointer();
+    auto l = left->GetPointer();
+    auto r = right->GetPointer();
 
     if ( l == r ) return true;
-    if ( l == nullptr && r->GetUserPtr() == OBJECTDELETED ) return true;
-    if ( r == nullptr && l->GetUserPtr() == OBJECTDELETED ) return true;
+    if ( l == nullptr )
+    {
+        if (const auto& rUser = r->GetUserPointer())
+        {
+            if (rUser->GetPointerAs<void>() == nullptr) return true;
+        }
+    }
+    if ( r == nullptr )
+    {
+        if (const auto& lUser = l->GetUserPointer())
+        {
+            if (lUser->GetPointerAs<void>() == nullptr) return true;
+        }
+    }
     return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool CBotVarPointer::Ne(CBotVar* left, CBotVar* right)
 {
-    CBotVarClass*    l = left->GetPointer();
-    CBotVarClass*    r = right->GetPointer();
+    auto l = left->GetPointer();
+    auto r = right->GetPointer();
 
     if ( l == r ) return false;
-    if ( l == nullptr && r->GetUserPtr() == OBJECTDELETED ) return false;
-    if ( r == nullptr && l->GetUserPtr() == OBJECTDELETED ) return false;
+    if ( l == nullptr )
+    {
+        if (const auto& rUser = r->GetUserPointer())
+        {
+            if (rUser->GetPointerAs<void>() == nullptr) return false;
+        }
+    }
+    if ( r == nullptr )
+    {
+        if (const auto& lUser = l->GetUserPointer())
+        {
+            if (lUser->GetPointerAs<void>() == nullptr) return false;
+        }
+    }
     return true;
 }
 

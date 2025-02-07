@@ -37,7 +37,7 @@ public:
         SetValShort(static_cast<unsigned short>(left->GetValShort()) >> right->GetValInt());
     }
 
-    bool Save1State(std::ostream &ostr) override
+    bool Save1State(std::ostream &ostr, CBotContext& context) override
     {
         return WriteShort(ostr, m_val);
     }

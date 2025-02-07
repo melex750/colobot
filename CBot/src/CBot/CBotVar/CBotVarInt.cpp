@@ -80,7 +80,7 @@ bool CBotVarInt::Save0State(std::ostream &ostr)
     return CBotVar::Save0State(ostr);
 }
 
-bool CBotVarInt::Save1State(std::ostream &ostr)
+bool CBotVarInt::Save1State(std::ostream &ostr, CBotContext& context)
 {
     return WriteInt(ostr, m_val);
 }

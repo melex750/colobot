@@ -17,20 +17,32 @@
  * along with this program. If not, see http://gnu.org/licenses
  */
 
-/*!
- * \file CBot.h
- * \brief Public interface of CBot language interpreter. CBot.h is the only file
- * that should be included by any Colobot files outside of the CBot module.
- */
+#pragma once
 
-#include "CBot/CBotFileUtils.h"
-#include "CBot/CBotClass.h"
-#include "CBot/CBotToken.h"
-#include "CBot/CBotProgram.h"
-#include "CBot/CBotTypResult.h"
+#include <memory>
 
-#include "CBot/CBotVar/CBotVar.h"
+namespace CBot
+{
 
-#include "CBot/context/cbot_context.h"
+class CBotContext;
 
-#include "CBot/stdlib/stdlib_public.h"
+using CBotContextSPtr = std::shared_ptr<CBot::CBotContext>;
+
+class CBotContextObserver
+{
+protected:
+    CBotContextObserver(const CBotContextSPtr& context) : m_context(context) {}
+    ~CBotContextObserver() {}
+
+public:
+    CBotContextSPtr GetContext() const
+    {
+        return m_context.lock();
+    }
+
+protected:
+
+    std::weak_ptr<CBotContext> m_context;
+};
+
+} // namespace CBot

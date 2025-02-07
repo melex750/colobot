@@ -32,9 +32,6 @@ namespace CBot
 
 namespace
 {
-std::unique_ptr<CBotFileAccessHandler> g_fileHandler;
-std::unordered_map<int, std::unique_ptr<CBotFile>> g_files;
-int g_nextFileId = 1;
 
 bool FileClassOpenFile(CBotVar* pThis, CBotVar* pVar, CBotVar* pResult, int& Exception)
 {
@@ -78,15 +75,23 @@ bool FileClassOpenFile(CBotVar* pThis, CBotVar* pVar, CBotVar* pResult, int& Exc
     // which must not be initialized
     if ( pVar->IsDefined()) { Exception = CBotErrFileOpen; return false; }
 
-    // opens the requested file
-    assert(g_fileHandler != nullptr);
+    auto context = pThis->GetClass()->GetContext();
+    if (!context)
+    {
+        Exception = CBotErrNull;
+        assert(false);
+        return false;
+    }
 
-    std::unique_ptr<CBotFile> file = g_fileHandler->OpenFile(filename, openMode);
+    // opens the requested file
+    const auto& fileHandler = context->GetFileAccessHandler();
+
+    std::unique_ptr<CBotFile> file = fileHandler->OpenFile(filename, openMode);
 
     if (!file->Opened()) { Exception = CBotErrFileOpen; return false; }
 
-    int fileHandle = g_nextFileId++;
-    g_files[fileHandle] = std::move(file);
+    int fileHandle = fileHandler->m_nextFileId++;
+    fileHandler->m_files[fileHandle] = std::move(file);
 
     // save the file handle
     pVar = pThis->GetItem("handle");
@@ -142,7 +147,15 @@ bool rfdestruct (CBotVar* pThis, CBotVar* pVar, CBotVar* pResult, int& Exception
     pVar = pThis->GetItem("handle");
 
     if (!pVar->IsDefined()) return true; // file not opened
-    g_files.erase(pVar->GetValInt());
+    auto context = pThis->GetClass()->GetContext();
+    if (!context)
+    {
+        Exception = CBotErrNull;
+        return false;
+    }
+
+    const auto& fileHandler = context->GetFileAccessHandler();
+    fileHandler->m_files.erase(pVar->GetValInt());
 
     pVar->SetInit(CBotVar::InitType::UNDEF);
     return true;
@@ -205,14 +218,24 @@ bool rfclose (CBotVar* pThis, CBotVar* pVar, CBotVar* pResult, int& Exception, v
 
     int fileHandle = pVar->GetValInt();
 
-    const auto handleIter = g_files.find(fileHandle);
-    if (handleIter == g_files.end())
+    auto context = pThis->GetClass()->GetContext();
+    if (!context)
+    {
+        Exception = CBotErrNull;
+        assert(false);
+        return false;
+    }
+
+    const auto& fileHandler = context->GetFileAccessHandler();
+
+    const auto handleIter = fileHandler->m_files.find(fileHandle);
+    if (handleIter == fileHandler->m_files.end())
     {
         Exception = CBotErrNotOpen;
         return false;
     }
 
-    g_files.erase(handleIter);
+    fileHandler->m_files.erase(handleIter);
 
     pVar->SetInit(CBotVar::InitType::UNDEF);
     return true;
@@ -248,8 +271,17 @@ bool rfwrite (CBotVar* pThis, CBotVar* pVar, CBotVar* pResult, int& Exception, v
 
     int fileHandle = pVar->GetValInt();
 
-    const auto handleIter = g_files.find(fileHandle);
-    if (handleIter == g_files.end())
+    auto context = pThis->GetClass()->GetContext();
+    if (!context)
+    {
+        Exception = CBotErrNull;
+        return false;
+    }
+
+    const auto& fileHandler = context->GetFileAccessHandler();
+
+    const auto handleIter = fileHandler->m_files.find(fileHandle);
+    if (handleIter == fileHandler->m_files.end())
     {
         Exception = CBotErrNotOpen;
         return false;
@@ -294,8 +326,17 @@ bool rfread(CBotVar* pThis, CBotVar* pVar, CBotVar* pResult, int& Exception, voi
 
     int fileHandle = pVar->GetValInt();
 
-    const auto handleIter = g_files.find(fileHandle);
-    if (handleIter == g_files.end())
+    auto context = pThis->GetClass()->GetContext();
+    if (!context)
+    {
+        Exception = CBotErrNull;
+        return false;
+    }
+
+    const auto& fileHandler = context->GetFileAccessHandler();
+
+    const auto handleIter = fileHandler->m_files.find(fileHandle);
+    if (handleIter == fileHandler->m_files.end())
     {
         Exception = CBotErrNotOpen;
         return false;
@@ -336,8 +377,17 @@ bool rfeof (CBotVar* pThis, CBotVar* pVar, CBotVar* pResult, int& Exception, voi
 
     int fileHandle = pVar->GetValInt();
 
-    const auto handleIter = g_files.find(fileHandle);
-    if (handleIter == g_files.end())
+    auto context = pThis->GetClass()->GetContext();
+    if (!context)
+    {
+        Exception = CBotErrNull;
+        return false;
+    }
+
+    const auto& fileHandler = context->GetFileAccessHandler();
+
+    const auto handleIter = fileHandler->m_files.find(fileHandle);
+    if (handleIter == fileHandler->m_files.end())
     {
         Exception = CBotErrNotOpen;
         return false;
@@ -358,27 +408,9 @@ CBotTypResult cfeof (CBotVar* pThis, CBotVar* &pVar)
     return CBotTypResult( CBotTypBoolean );
 }
 
-// Instruction "deletefile(filename)".
-
-bool rDeleteFile(CBotVar* var, CBotVar* result, int& exception, void* user)
-{
-    std::filesystem::path filename;
-    try
-    {
-        filename = StrUtils::ToPath(var->GetValString());
-    }
-    catch(...)
-    {
-        exception = CBotErrFileOpen;
-        return false;
-    }
-    assert(g_fileHandler != nullptr);
-    return g_fileHandler->DeleteFile(filename);
-}
-
 } // namespace
 
-void InitFileFunctions()
+void InitFileIOLibrary(CBotContext& context)
 {
     // create a class for file management
     // the use is as follows:
@@ -388,34 +420,31 @@ void InitFileFunctions()
     // canal.close();   // close the file
 
     // create the class FILE
-    CBotClass* bc = CBotClass::Create("file", nullptr);
-    // adds the component ".filename"
-    bc->AddItem("filename", CBotTypString);
-    // adds the component ".handle"
-    bc->AddItem("handle", CBotTypInt, CBotVar::ProtectionLevel::Private);
+    auto bc = context.FindClass("file");
+    if (bc == nullptr)
+    {
+        bc = context.CreateClass("file", nullptr);
+        // adds the component ".filename"
+        bc->AddItem("filename", CBotTypString);
+        // adds the component ".handle"
+        bc->AddItem("handle", CBotTypInt, CBotVar::ProtectionLevel::Private);
 
-    // define a constructor and a destructor
-    bc->AddFunction("file", rfconstruct, cfconstruct);
-    bc->AddFunction("~file", rfdestruct, nullptr);
+        // define a constructor and a destructor
+        bc->AddFunction("file", rfconstruct, cfconstruct);
+        bc->AddFunction("~file", rfdestruct, nullptr);
 
-    // end of the methods associated
-    bc->AddFunction("open", rfopen, cfopen);
-    bc->AddFunction("close", rfclose, cfclose);
-    bc->AddFunction("writeln", rfwrite, cfwrite);
-    bc->AddFunction("readln", rfread, cfread);
-    bc->AddFunction("eof", rfeof, cfeof );
-
-    CBotProgram::AddFunction("deletefile", rDeleteFile, cString);
+        // end of the methods associated
+        bc->AddFunction("open", rfopen, cfopen);
+        bc->AddFunction("close", rfclose, cfclose);
+        bc->AddFunction("writeln", rfwrite, cfwrite);
+        bc->AddFunction("readln", rfread, cfread);
+        bc->AddFunction("eof", rfeof, cfeof );
+    }
 
     //m_pFuncFile = new CBotProgram( );
     //std::stringArray ListFonctions;
     //m_pFuncFile->Compile( "public file openfile(string name, string mode) {return new file(name, mode);}", ListFonctions);
     //m_pFuncFile->SetIdent(-2);  // restoreState in special identifier for this function
-}
-
-void SetFileAccessHandler(std::unique_ptr<CBotFileAccessHandler> fileHandler)
-{
-    g_fileHandler = std::move(fileHandler);
 }
 
 } // namespace CBot

@@ -37,7 +37,7 @@ public:
         SetValByte(static_cast<unsigned char>(left->GetValByte()) >> right->GetValInt());
     }
 
-    bool Save1State(std::ostream &ostr) override
+    bool Save1State(std::ostream &ostr, CBotContext& context) override
     {
         return WriteByte(ostr, m_val);
     }

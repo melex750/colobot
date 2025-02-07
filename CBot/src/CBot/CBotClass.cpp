@@ -35,20 +35,21 @@
 #include "CBot/CBotStack.h"
 #include "CBot/CBotCStack.h"
 #include "CBot/CBotDefParam.h"
+#include "CBot/CBotProgram.h"
 #include "CBot/CBotUtils.h"
+
+#include "CBot/context/cbot_context.h"
 
 #include <algorithm>
 
 namespace CBot
 {
 
-////////////////////////////////////////////////////////////////////////////////
-std::set<CBotClass*> CBotClass::m_publicClasses{};
-
-////////////////////////////////////////////////////////////////////////////////
 CBotClass::CBotClass(const std::string& name,
                      CBotClass* parent,
-                     bool bIntrinsic)
+                     const CBotContextSPtr& context,
+                     bool bIntrinsic) :
+    CBotContextObserver(context)
 {
     m_parent    = parent;
     m_name      = name;
@@ -59,13 +60,11 @@ CBotClass::CBotClass(const std::string& name,
     m_bIntrinsic= bIntrinsic;
     m_nbVar     = m_parent == nullptr ? 0 : m_parent->m_nbVar;
 
-    m_publicClasses.insert(this);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 CBotClass::~CBotClass()
 {
-    m_publicClasses.erase(this);
 
     delete  m_pVar;
     delete  m_externalMethods;
@@ -74,22 +73,12 @@ CBotClass::~CBotClass()
 ////////////////////////////////////////////////////////////////////////////////
 CBotClass* CBotClass::Create(const std::string& name,
                              CBotClass* parent,
+                             const CBotContextSPtr& context,
                              bool intrinsic)
 {
-    return new CBotClass(name, parent, intrinsic);
+    return new CBotClass(name, parent, context, intrinsic);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-void CBotClass::ClearPublic()
-{
-    while ( !m_publicClasses.empty() )
-    {
-        auto it = m_publicClasses.begin();
-        delete *it; // calling destructor removes the class from the list
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
 void CBotClass::Purge()
 {
     delete      m_pVar;
@@ -138,7 +127,7 @@ void CBotClass::Unlock()
 ////////////////////////////////////////////////////////////////////////////////
 void CBotClass::FreeLock(CBotProgram* prog)
 {
-    for (CBotClass* pClass : m_publicClasses)
+    CBotClass* pClass = this;
     {
         if (pClass->m_lockProg.size() > 0 && prog == pClass->m_lockProg[0])
         {
@@ -267,29 +256,11 @@ bool CBotClass::IsIntrinsic()
     return  m_bIntrinsic;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-CBotClass* CBotClass::Find(CBotToken* &pToken)
-{
-    return Find(pToken->GetString());
-}
-
-////////////////////////////////////////////////////////////////////////////////
-CBotClass* CBotClass::Find(const std::string& name)
-{
-    for (CBotClass* p : m_publicClasses)
-    {
-        if ( p->GetName() == name ) return p;
-    }
-
-    return nullptr;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 bool CBotClass::AddFunction(const std::string& name,
-                            bool rExec(CBotVar* pThis, CBotVar* pVar, CBotVar* pResult, int& Exception, void* user),
-                            CBotTypResult rCompile(CBotVar* pThis, CBotVar*& pVar))
+                            ClassRuntimeFunc rExec,
+                            ClassCompileFunc cCompile)
 {
-    return m_externalMethods->AddFunction(name, std::unique_ptr<CBotExternalCall>(new CBotExternalCallClass(rExec, rCompile)));
+    return m_externalMethods->AddFunction(name, rExec, cCompile);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -362,77 +333,30 @@ void CBotClass::RestoreMethode(long& nIdent,
     assert(false);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-bool CBotClass::SaveStaticState(std::ostream &ostr)
+bool CBotClass::SaveStaticVars(std::ostream &ostr, CBotClass* pClass)
 {
-    if (!WriteLong(ostr, CBOTVERSION*2)) return false;
-
-    // saves the state of static variables in classes
-    for (CBotClass* p : m_publicClasses)
+    for (auto pv = pClass->GetVar(); pv != nullptr; pv = pv->GetNext())
     {
-        if (!WriteWord(ostr, 1)) return false;
-        // save the name of the class
-        if (!WriteString(ostr, p->GetName())) return false;
-
-        CBotVar*    pv = p->GetVar();
-        while( pv != nullptr )
-        {
-            if ( pv->IsStatic() )
-            {
-                if (!WriteWord(ostr, 1)) return false;
-                if (!WriteString(ostr, pv->GetName())) return false;
-
-                if (!pv->Save0State(ostr)) return false;             // common header
-                if (!pv->Save1State(ostr)) return false;                // saves as the child class
-                if (!WriteWord(ostr, 0)) return false;
-            }
-            pv = pv->GetNext();
-        }
-
-        if (!WriteWord(ostr, 0)) return false;
+        if ( !pv->IsStatic() ) continue;
+        if (!WriteString(ostr, pv->GetName())) return false;
+        if (!pv->Save0State(ostr)) return false;             // common header
+        if (!pv->Save1State(ostr, *pClass->GetContext())) return false;                // saves as the child class
     }
-
-    if (!WriteWord(ostr, 0)) return false;
-    return true;
+    return WriteString(ostr, "");
 }
 
-////////////////////////////////////////////////////////////////////////////////
-bool CBotClass::RestoreStaticState(std::istream &istr)
+bool CBotClass::RestoreStaticVars(std::istream &istr, CBotClass* pClass, CBotContext& context)
 {
-    std::string      ClassName, VarName;
-    CBotClass*      pClass;
-    unsigned short  w;
-
-    long version;
-    if (!ReadLong(istr, version)) return false;
-    if (version != CBOTVERSION*2) return false;
-
-    while (true)
+    for ( std::string varname; ReadString(istr, varname); )
     {
-        if (!ReadWord(istr, w)) return false;
-        if ( w == 0 ) return true;
-
-        if (!ReadString(istr, ClassName)) return false;
-        pClass = Find(ClassName);
-
-        while (true)
-        {
-            if (!ReadWord(istr, w)) return false;
-            if ( w == 0 ) break;
-
-            CBotVar*    pVar = nullptr;
-            CBotVar*    pv = nullptr;
-
-            if (!ReadString(istr, VarName)) return false;
-            if ( pClass != nullptr ) pVar = pClass->GetItem(VarName);
-
-            if (!CBotVar::RestoreState(istr, pv)) return false; // the temp variable
-
-            if ( pVar != nullptr ) pVar->Copy(pv);
-            delete pv;
-        }
+        if (varname.empty()) return true;
+        CBotVarUPtr pv;
+        if (!CBotVar::RestoreVar(istr, pv, context)) return false;
+        if (pv == nullptr) { assert(false); return false; }
+        auto pVar = pClass ? pClass->GetItem(varname) : nullptr;
+        if (pVar != nullptr) pVar->Copy(pv.get());
     }
-    return true;
+    return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -440,7 +364,7 @@ bool CBotClass::CheckCall(CBotProgram* program, CBotDefParam* pParam, CBotToken*
 {
     std::string  name = pToken->GetString();
 
-    if ( program->GetExternalCalls()->CheckCall(name) ) return true;
+    if ( program->GetContext()->CheckCall(name) ) return true;
 
     for (CBotFunction* pp : m_pMethod)
     {
@@ -471,7 +395,7 @@ CBotClass* CBotClass::Compile1(CBotToken* &p, CBotCStack* pStack)
     // a name of the class is there?
     if (IsOfType(p, TokenTypVar))
     {
-        CBotClass* pOld = CBotClass::Find(name);
+        auto pOld = pStack->FindClass(name);
         if ((pOld != nullptr && pOld->m_IsDef) ||          /* public class exists in different program */
             pStack->GetProgram()->ClassExists(name))       /* class exists in this program */
         {
@@ -483,7 +407,7 @@ CBotClass* CBotClass::Compile1(CBotToken* &p, CBotCStack* pStack)
         if ( IsOfType( p, ID_EXTENDS ) )
         {
             std::string name = p->GetString();
-            pPapa = CBotClass::Find(name);
+            pPapa = pStack->FindClass(name);
             CBotToken* pp = p;
 
             if (!IsOfType(p, TokenTypVar) || pPapa == nullptr )
@@ -492,7 +416,9 @@ CBotClass* CBotClass::Compile1(CBotToken* &p, CBotCStack* pStack)
                 return nullptr;
             }
         }
-        CBotClass* classe = (pOld == nullptr) ? new CBotClass(name, pPapa) : pOld;
+        auto context = pStack->GetContext();
+        auto classe = (pOld == nullptr) ? context->CreateClass(name, pPapa) : pOld;
+
         classe->Purge();                            // empty the old definitions
         classe->m_IsDef = false;                    // current definition
 
@@ -733,7 +659,7 @@ bool CBotClass::CompileDefItem(CBotToken* &p, CBotCStack* pStack, bool bSecond)
 
                 if ( pv->IsStatic() && pv->m_InitExpr != nullptr )
                 {
-                    CBotStack* pile = CBotStack::AllocateStack();              // independent stack
+                    CBotStack* pile = CBotStack::AllocateStack(pStack->GetContext()); // independent stack
                     if ( type2.Eq(CBotTypArrayPointer) )
                     {
                         while(pile->IsOk() && !pv->m_InitExpr->Execute(pile, pv));
@@ -772,13 +698,13 @@ CBotClass* CBotClass::Compile(CBotToken* &p, CBotCStack* pStack)
     if (IsOfType(p, TokenTypVar))
     {
         // the class was created by Compile1
-        CBotClass* pOld = CBotClass::Find(name);
+        auto pOld = pStack->FindClass(name);
 
         if ( IsOfType( p, ID_EXTENDS ) )
         {
             // TODO: Not sure how correct is that - I have no idea how the precompilation (Compile1 method) works ~krzys_h
             std::string name = p->GetString();
-            CBotClass* pPapa = CBotClass::Find(name);
+            auto pPapa = pStack->FindClass(name);
             CBotToken* pp = p;
 
             if (!IsOfType(p, TokenTypVar) || pPapa == nullptr)

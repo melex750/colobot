@@ -22,7 +22,7 @@
 namespace CBot
 {
 
-bool CBotVarFloat::Save1State(std::ostream &ostr)
+bool CBotVarFloat::Save1State(std::ostream &ostr, CBotContext& context)
 {
     return WriteFloat(ostr, m_val); // the value of the variable
 }

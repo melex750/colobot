@@ -55,7 +55,7 @@ CBotInstr* CBotCase::Compile(CBotToken* &p, CBotCStack* pStack, std::unordered_m
         {
             if (pStack->GetType() <= CBotTypLong)
             {
-                CBotStack* pile = CBotStack::AllocateStack();
+                CBotStack* pile = CBotStack::AllocateStack(pStack->GetContext());
                 while ( !i->Execute(pile) );
                 labelValue = pile->GetVar()->GetValLong();
                 pile->Delete();

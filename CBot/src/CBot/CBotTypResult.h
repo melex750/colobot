@@ -55,19 +55,6 @@ public:
     CBotTypResult(int type);
 
     /**
-     * \brief Constructor for pointer types and intrinsic classes
-     *
-     * This is equivalent to calling:
-     * \code
-     * CBotTypResult(type, CBotClass::Find(name))
-     * \endcode
-     *
-     * \param type type of created result, see ::CBotType
-     * \param name name of the class
-     */
-    CBotTypResult(int type, const std::string& name);
-
-    /**
      * \brief Constructor for instance of a class
      * \param type type of created result, see ::CBotType
      * \param pClass class type

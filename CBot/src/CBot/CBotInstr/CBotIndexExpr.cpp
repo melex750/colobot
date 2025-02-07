@@ -91,7 +91,7 @@ bool CBotIndexExpr::ExecuteVar(CBotVar* &pVar, CBotStack* &pile, CBotToken* prev
         return pj->Return(pile);
     }
 
-    pVar->Update(pile->GetUserPtr());
+    pVar->Update();
 
     if ( m_next3 != nullptr &&
          !m_next3->ExecuteVar(pVar, pile, prevToken, bStep, bExtend) ) return false;

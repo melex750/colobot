@@ -26,15 +26,12 @@
 
 #include "common/error.h"
 
-#include <string>
-#include <unordered_map>
-#include <memory>
-
 class CObject;
 class CScript;
 class CExchangePost;
 namespace CBot
 {
+class CBotContext;
 class CBotTypResult;
 class CBotVar;
 }
@@ -43,7 +40,8 @@ class CBotVar;
 class CScriptFunctions
 {
 public:
-    static void Init();
+    static void InitFunctions(CBot::CBotContext& context);
+    static void InitContextGlobal(CBot::CBotContext& globalContext);
 
     static CBot::CBotVar* CreateObjectVar(CObject* obj);
     static void DestroyObjectVar(CBot::CBotVar* botVar, bool permanent);
@@ -154,11 +152,10 @@ private:
     static bool rResearch(CBot::CBotVar* var, CBot::CBotVar* result, int& exception, void* user);
     static bool rDestroy(CBot::CBotVar* var, CBot::CBotVar* result, int& exception, void* user);
 
+    static bool rDeleteFile(CBot::CBotVar* var, CBot::CBotVar* result, int& exception, void* user);
+
     static CBot::CBotTypResult cClassNull(CBot::CBotVar* thisclass, CBot::CBotVar* &var);
     static CBot::CBotTypResult cClassOneFloat(CBot::CBotVar* thisclass, CBot::CBotVar* &var);
-
-    static CBot::CBotTypResult cPointConstructor(CBot::CBotVar* pThis, CBot::CBotVar* &var);
-    static bool rPointConstructor(CBot::CBotVar* pThis, CBot::CBotVar* var, CBot::CBotVar* pResult, int& Exception, void* user);
 
     static void uObject(CBot::CBotVar* botThis, void* user);
 

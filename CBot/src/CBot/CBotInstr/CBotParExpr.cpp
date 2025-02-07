@@ -20,6 +20,7 @@
 #include "CBot/CBotInstr/CBotParExpr.h"
 
 #include "CBot/CBotInstr/CBotExpression.h"
+#include "CBot/CBotInstr/CBotExprConstant.h"
 #include "CBot/CBotInstr/CBotExprLitBool.h"
 #include "CBot/CBotInstr/CBotExprLitChar.h"
 #include "CBot/CBotInstr/CBotExprLitNan.h"
@@ -160,11 +161,17 @@ CBotInstr* CBotParExpr::CompileLitExpr(CBotToken* &p, CBotCStack* pStack)
     if (inst != nullptr || !pStk->IsOk())
         return pStack->Return(inst, pStk);
 
-    // is it a number or DefineNum?
-    if (p->GetType() == TokenTypNum ||
-        p->GetType() == TokenTypDef )
+    // is it a number?
+    if (p->GetType() == TokenTypNum)
     {
         CBotInstr* inst = CBot::CompileExprLitNum(p, pStk);
+        return pStack->Return(inst, pStk);
+    }
+
+    // is it a defined constant?
+    if (p->GetType() == TokenTypDef)
+    {
+        CBotInstr* inst = CBot::CompileExprConstant(p, pStk);
         return pStack->Return(inst, pStk);
     }
 
@@ -255,11 +262,17 @@ CBotInstr* CBotParExpr::CompileConstExpr(CBotToken* &p, CBotCStack* pStack)
     if (inst != nullptr || !pStk->IsOk())
         return pStack->Return(inst, pStk);
 
-    // is it a number or DefineNum?
-    if (p->GetType() == TokenTypNum ||
-        p->GetType() == TokenTypDef )
+    // is it a number?
+    if (p->GetType() == TokenTypNum)
     {
         CBotInstr* inst = CBot::CompileExprLitNum(p, pStk);
+        return pStack->Return(inst, pStk);
+    }
+
+    // is it a defined constant?
+    if (p->GetType() == TokenTypDef)
+    {
+        CBotInstr* inst = CBot::CompileExprConstant(p, pStk);
         return pStack->Return(inst, pStk);
     }
 

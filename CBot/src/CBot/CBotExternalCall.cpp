@@ -34,18 +34,32 @@ void CBotExternalCallList::Clear()
     m_list.clear();
 }
 
-bool CBotExternalCallList::AddFunction(const std::string& name, std::unique_ptr<CBotExternalCall> call)
+bool CBotExternalCallList::AddFunction(const std::string& name,
+                                       DefaultRuntimeFunc rExec,
+                                       DefaultCompileFunc cCompile)
 {
-    m_list[name] = std::move(call);
+    auto& newFunc = m_list[name];
+    if (newFunc) return false; // does not replace existing object
+    newFunc = std::make_unique<CBotExternalCallDefault>(rExec, cCompile);
+    return true;
+}
+
+bool CBotExternalCallList::AddFunction(const std::string& name,
+                                       ClassRuntimeFunc rExec,
+                                       ClassCompileFunc cCompile)
+{
+    auto& newFunc = m_list[name];
+    if (newFunc) return false; // does not replace existing object
+    newFunc = std::make_unique<CBotExternalCallClass>(rExec, cCompile);
     return true;
 }
 
 CBotTypResult CBotExternalCallList::CompileCall(CBotToken*& p, CBotVar* thisVar, CBotVar** ppVar, CBotCStack* pStack)
 {
-    if (m_list.count(p->GetString()) == 0)
-        return -1;
+    auto it = m_list.find(p->GetString());
+    if (it == m_list.end()) return -1;
 
-    CBotExternalCall* pt = m_list[p->GetString()].get();
+    CBotExternalCall* pt = it->second.get();
 
     std::unique_ptr<CBotVar> args = std::unique_ptr<CBotVar>(MakeListVars(ppVar));
     CBotTypResult r = pt->Compile(thisVar, args.get(), m_user);
@@ -74,13 +88,10 @@ bool CBotExternalCallList::CheckCall(const std::string& name)
 int CBotExternalCallList::DoCall(CBotToken* token, CBotVar* thisVar, CBotVar** ppVar, CBotStack* pStack,
                                  const CBotTypResult& rettype)
 {
-    if (token == nullptr)
-        return -1;
+    auto it = m_list.find(token->GetString());
+    if (it == m_list.end()) return -1;
 
-    if (m_list.count(token->GetString()) == 0)
-        return -1;
-
-    CBotExternalCall* pt = m_list[token->GetString()].get();
+    CBotExternalCall* pt = it->second.get();
 
     if (thisVar == nullptr && pStack->IsCallFinished()) return true;  // only for non-method external call
 
@@ -106,10 +117,10 @@ int CBotExternalCallList::DoCall(CBotToken* token, CBotVar* thisVar, CBotVar** p
 
 bool CBotExternalCallList::RestoreCall(CBotToken* token, CBotVar* thisVar, CBotVar** ppVar, CBotStack* pStack)
 {
-    if (m_list.count(token->GetString()) == 0)
-        return false;
+    auto it = m_list.find(token->GetString());
+    if (it == m_list.end()) return false;
 
-    CBotExternalCall* pt = m_list[token->GetString()].get();
+    CBotExternalCall* pt = it->second.get();
 
     // if this is a method call we need to use RestoreStack()
     CBotStack* pile = (thisVar != nullptr) ? pStack->RestoreStack() : pStack->RestoreStackEOX(pt);
@@ -131,7 +142,7 @@ CBotExternalCall::~CBotExternalCall()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-CBotExternalCallDefault::CBotExternalCallDefault(RuntimeFunc rExec, CompileFunc rCompile)
+CBotExternalCallDefault::CBotExternalCallDefault(DefaultRuntimeFunc rExec, DefaultCompileFunc rCompile)
 {
     m_rExec = rExec;
     m_rComp = rCompile;
@@ -174,7 +185,7 @@ bool CBotExternalCallDefault::Run(CBotVar* thisVar, CBotStack* pStack)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-CBotExternalCallClass::CBotExternalCallClass(RuntimeFunc rExec, CompileFunc rCompile)
+CBotExternalCallClass::CBotExternalCallClass(ClassRuntimeFunc rExec, ClassCompileFunc rCompile)
 {
     m_rExec = rExec;
     m_rComp = rCompile;

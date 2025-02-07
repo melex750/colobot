@@ -25,6 +25,8 @@
 
 #include "CBot/CBotVar/CBotVarClass.h"
 
+#include "CBot/context/cbot_user_pointer.h"
+
 #include <cassert>
 #include <sstream>
 
@@ -77,20 +79,28 @@ bool CBotFieldExpr::ExecuteVar(CBotVar* &pVar, CBotStack* &pile, CBotToken* prev
     if (pVar->GetType(CBotVar::GetTypeMode::CLASS_AS_POINTER) != CBotTypPointer)
         assert(0);
 
-    CBotVarClass* pItem = pVar->GetPointer();
-    if (pItem == nullptr)
+    if (pVar->GetType(CBotVar::GetTypeMode::CLASS_AS_INTRINSIC) != CBotTypIntrinsic)
     {
-        pile->SetError(CBotErrNull, prevToken);
-        return pj->Return(pile);
-    }
-    if (pItem->GetUserPtr() == OBJECTDELETED)
-    {
-        pile->SetError(CBotErrDeletedPtr, prevToken);
-        return pj->Return(pile);
+        auto pItem = pVar->GetPointer();
+        if (pItem == nullptr)
+        {
+            pile->SetError(CBotErrNull, prevToken);
+            return pj->Return(pile);
+        }
+
+        if (const auto& userPtr = pItem->GetUserPointer())
+        {
+            if (userPtr->GetPointerAs<void>() == nullptr)
+            {
+                pile->SetError(CBotErrDeletedPtr, prevToken);
+                return pj->Return(pile);
+            }
+        }
     }
 
     if (bStep && pile->IfStep()) return false;
 
+    CBotClass* pClass = pVar->GetClass();
     pVar = pVar->GetItemRef(m_nIdent);
     if (pVar == nullptr)
     {
@@ -101,12 +111,11 @@ bool CBotFieldExpr::ExecuteVar(CBotVar* &pVar, CBotStack* &pile, CBotToken* prev
     if (pVar->IsStatic())
     {
         // for a static variable, takes it in the class itself
-        CBotClass* pClass = pItem->GetClass();
         pVar = pClass->GetItem(m_token.GetString());
     }
 
     // request the update of the element, if applicable
-    pVar->Update(pile->GetUserPtr());
+    pVar->Update();
 
     if ( m_next3 != nullptr &&
          !m_next3->ExecuteVar(pVar, pile, &m_token, bStep, bExtend) ) return false;

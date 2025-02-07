@@ -279,7 +279,9 @@ CRobotMain::CRobotMain()
 
     SelectPlayer(CPlayerProfile::GetLastName());
 
-    CScriptFunctions::Init();
+    m_globalCBotContext = CBot::CBotContext::CreateGlobalContext();
+    CScriptFunctions::InitContextGlobal(*m_globalCBotContext);
+
 }
 
 //! Destructor of robot application
@@ -4083,7 +4085,7 @@ bool CRobotMain::FlatFreeSpace(glm::vec3 &center, float minFlat, float minRadius
             pos.z = p.y;
             pos.y = 0.0f;
             m_terrain->AdjustToFloor(pos, true);
-	    
+
             if (SearchNearestObject(m_objMan.get(), pos, exclu) < space) continue;
             if (m_terrain->GetFlatZoneRadius(pos, minFlat) < minFlat) continue;
             if (m_terrain->GetFloorLevel(pos) < m_water->GetLevel()) continue;
@@ -4608,9 +4610,22 @@ bool CRobotMain::IOWriteScene(const std::filesystem::path& filename,
     CBot::WriteLong(ostr, version);                 // version of CBOT
     CBot::WriteWord(ostr, 0); // TODO
 
+    GetCBotContextGlobal()->ClearInstanceList();
     for (CObject* obj : m_objMan->GetAllObjects())
     {
         if (IsSkip(obj)) continue;
+
+        auto var = obj->GetBotVar();
+        if (var->PointerIsUnique()) // skip saving a unique reference
+        {
+            if (!CBot::WriteWord(ostr, 0)) { bError = true; break;}
+        }
+        else if (!var->Save0State(ostr) || !var->Save1State(ostr, *m_globalCBotContext))
+        {
+            bError = true;
+            GetLogger()->Error("Saving object var failed at object id = %%", obj->GetID());
+            break;
+        }
 
         if (!SaveFileStack(obj, ostr))
         {
@@ -4620,9 +4635,27 @@ bool CRobotMain::IOWriteScene(const std::filesystem::path& filename,
         }
     }
 
-    if (!bError && !CBot::CBotClass::SaveStaticState(ostr))
+    if (!bError)
     {
-        GetLogger()->Error("CBotClass save static state failed");
+        if ((bError = !m_globalCBotContext->WriteStaticState(ostr)))
+            GetLogger()->Error("global cbot context save static state failed");
+    }
+
+    if (!bError)
+    {
+        auto teams = GetAllTeams();
+        teams.insert(0);
+        for (auto& team : teams)
+        {
+            if (auto context = GetCBotContextForTeam(team))
+            {
+                if ((bError = !CBot::WriteWord(ostr, 1))) break;
+                if ((bError = !CBot::WriteInt(ostr, team))) break;
+                if ((bError = !context->WriteStaticState(ostr))) break;
+            }
+        }
+        if (!bError) bError = !CBot::WriteWord(ostr, 0); // no more teams
+        if (bError) GetLogger()->Error("team cbot context save static state failed");
     }
 
     ostr.close();
@@ -4845,11 +4878,26 @@ CObject* CRobotMain::IOReadScene(const std::filesystem::path& filename,
                 CBot::ReadWord(istr, flag); // TODO
                 bError = (flag != 0);
 
+                GetCBotContextGlobal()->ClearInstanceList();
                 if (!bError) for (CObject* obj : m_objMan->GetAllObjects())
                 {
                     if (obj->GetType() == OBJECT_TOTO) continue;
                     if (IsObjectBeingTransported(obj)) continue;
                     if (obj->Implements(ObjectInterfaceType::Destroyable) && dynamic_cast<CDestroyableObject&>(*obj).IsDying()) continue;
+
+                    CBot::CBotVarUPtr objVar;
+                    if (!CBot::CBotVar::RestoreVar(istr, objVar, *m_globalCBotContext))
+                    {
+                        bError = true;
+                        GetLogger()->Error("Restoring object var failed at object id = %%", obj->GetID());
+                        break;
+                    }
+
+                    if (objVar)
+                    {
+                        objVar->SetUserPointer(CBot::CBotUserPointer::Create(obj));
+                        obj->GetBotVar()->SetPointer(objVar->GetPointer());
+                    }
 
                     if (!ReadFileStack(obj, istr))
                     {
@@ -4859,10 +4907,26 @@ CObject* CRobotMain::IOReadScene(const std::filesystem::path& filename,
                     }
                 }
 
-                if (!bError && !CBot::CBotClass::RestoreStaticState(istr))
+                if (!bError && (bError = !m_globalCBotContext->ReadStaticState(istr)))
                 {
-                    GetLogger()->Error("CBotClass restore static state failed");
-                    bError = true;
+                    GetLogger()->Error("global cbot context read static state failed");
+                }
+
+                if (!bError)
+                {
+                    for ( unsigned short n; !bError; )
+                    {
+                        if ((bError = !CBot::ReadWord(istr, n))) break;
+                        if (n == 0) break; // no more teams
+                        if ((bError = n != 1)) break;
+
+                        int team;
+                        if ((bError = !CBot::ReadInt(istr, team))) break;
+                        auto teamContext = GetCBotContextForTeam(team);
+
+                        bError = !teamContext->ReadStaticState(istr);
+                    }
+                    if (bError) GetLogger()->Error("team cbot context read static state failed");
                 }
             }
             else
@@ -6212,4 +6276,25 @@ std::set<int> CRobotMain::GetAllActiveTeams()
         teams.insert(team);
     }
     return teams;
+}
+
+const std::shared_ptr<CBot::CBotContext>& CRobotMain::GetCBotContextGlobal()
+{
+    if ( !m_globalCBotContext )
+    {
+        m_globalCBotContext = CBot::CBotContext::CreateGlobalContext();
+        CScriptFunctions::InitContextGlobal(*m_globalCBotContext);
+    }
+    return m_globalCBotContext;
+}
+
+std::shared_ptr<CBot::CBotContext> CRobotMain::GetCBotContextForTeam(int team)
+{
+    if (auto context = m_teamCBotContext[team].lock()) return context;
+
+    auto newContext = CBot::CBotContext::Create(GetCBotContextGlobal());
+    CScriptFunctions::InitFunctions(*newContext);
+
+    m_teamCBotContext[team] = newContext;
+    return newContext;
 }

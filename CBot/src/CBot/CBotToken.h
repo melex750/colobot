@@ -28,6 +28,8 @@
 
 namespace CBot
 {
+
+class CBotContext;
 class CBotToken;
 
 using CBotTokenUPtr = std::unique_ptr<CBotToken>;
@@ -168,21 +170,8 @@ public:
      * \return The first token in the linked list
      */
     static CBotTokenUPtr CompileTokens(const std::string& program,
+                                       const CBotContext& context,
                                        CBotToken::Data* tokendata = nullptr);
-
-    /**
-     * \brief Define a new constant
-     * \param name Name of the constant
-     * \param val Value of the constant
-     * \return true on success, false if already defined
-     */
-    static bool DefineNum(const std::string& name, long val);
-
-    /**
-     * \brief Clear the list of defined constants
-     * \see DefineNum()
-     */
-    static void ClearDefineNum();
 
     /**
      * \brief Generate a CRC32 signature for a sequence of tokens.
@@ -221,9 +210,6 @@ private:
     //! The end position of the token in the CBotProgram
     int m_end = 0;
 
-    //! Map of all defined constants (see DefineNum())
-    static std::map<std::string, long> m_defineNum;
-
     /**
      * \brief Check if the word is a keyword
      * \param w The word to check
@@ -231,13 +217,6 @@ private:
      */
     static int GetKeyWord(const std::string& w);
 
-    /**
-     * \brief Resolve a constant defined with DefineNum()
-     * \param name Constant name
-     * \param token Token that we are working on, will be filled with data about found constant
-     * \return true if the constant was found, false otherwise
-     */
-    static bool GetDefineNum(const std::string& name, CBotToken* token);
 };
 
 /**

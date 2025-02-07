@@ -284,19 +284,18 @@ bool rStrLower( CBotVar* pVar, CBotVar* pResult, int& ex, void* pUser )
 
 } // namespace
 
-////////////////////////////////////////////////////////////////////////////////
-void InitStringFunctions()
+void InitStringFunctions(CBotContext& context)
 {
-    CBotProgram::AddFunction("strlen",   rStrLen,   cIntStr );
-    CBotProgram::AddFunction("strleft",  rStrLeft,  cStrStrInt );
-    CBotProgram::AddFunction("strright", rStrRight, cStrStrInt );
-    CBotProgram::AddFunction("strmid",   rStrMid,   cStrStrIntInt );
+    context.AddFunction("strlen",   rStrLen,   cIntStr );
+    context.AddFunction("strleft",  rStrLeft,  cStrStrInt );
+    context.AddFunction("strright", rStrRight, cStrStrInt );
 
-    CBotProgram::AddFunction("strval",   rStrVal,   cFloatStr );
-    CBotProgram::AddFunction("strfind",  rStrFind,  cIntStrStr );
+    context.AddFunction("strmid",   rStrMid,   cStrStrIntInt );
+    context.AddFunction("strval",   rStrVal,   cFloatStr );
 
-    CBotProgram::AddFunction("strupper", rStrUpper, cStrStr );
-    CBotProgram::AddFunction("strlower", rStrLower, cStrStr );
+    context.AddFunction("strfind",  rStrFind,  cIntStrStr );
+    context.AddFunction("strupper", rStrUpper, cStrStr );
+    context.AddFunction("strlower", rStrLower, cStrStr );
 }
 
 } // namespace CBot
