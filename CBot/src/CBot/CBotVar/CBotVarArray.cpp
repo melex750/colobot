@@ -127,7 +127,13 @@ std::string CBotVarArray::GetValString() const
 bool CBotVarArray::Save1State(std::ostream &ostr, CBotContext& context)
 {
     if (!WriteType(ostr, m_type)) return false;
-    return WriteVarListAsArray(ostr, m_pInstance.get(), context); // saves the instance that manages the table
+
+    if (!m_pInstance) return WriteWord(ostr, 0); // save nullptr
+
+    // save the instance
+    if (!m_pInstance->Save0State(ostr)) return false; // common header
+    if (!m_pInstance->Save1State(ostr, context)) return false; // saves the data or reference
+    return true;
 }
 
 } // namespace CBot

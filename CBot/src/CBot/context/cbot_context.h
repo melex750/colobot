@@ -84,7 +84,6 @@ public:
     CBotVar* FindInstance(int id) const;
     void ClearInstanceList();
     int DeclareInstance(CBotVar* var);
-    void DeclareInstance(int id, CBotVar* var);
 
     bool IsDefinedConstant(const std::string& name) const override;
 

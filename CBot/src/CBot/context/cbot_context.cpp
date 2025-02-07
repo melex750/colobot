@@ -79,12 +79,6 @@ int CBotContext::DeclareInstance(CBotVar* var)
     return id;
 }
 
-void CBotContext::DeclareInstance(int id, CBotVar* var)
-{
-    assert(m_globalData->m_next == 1);
-    m_globalData->m_instances[id] = var;
-}
-
 CBotClass* CBotContext::FindClass(const std::string& name) const
 {
     auto it = m_classList.find(name);

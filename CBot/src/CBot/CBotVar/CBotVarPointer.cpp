@@ -173,8 +173,12 @@ bool CBotVarPointer::Save1State(std::ostream &ostr, CBotContext& context)
         if (!WriteString(ostr, "")) return false;
     }
 
+    if (!m_pVarClass) return WriteWord(ostr, 0); // save nullptr
+
     // save the instance
-    return WriteVarListAsArray(ostr, m_pVarClass.get(), context);
+    if (!m_pVarClass->Save0State(ostr)) return false; // common header
+    if (!m_pVarClass->Save1State(ostr, context)) return false; // saves the data or reference
+    return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

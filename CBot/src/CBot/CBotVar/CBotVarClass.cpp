@@ -440,22 +440,19 @@ bool CBotVarClass::Save1State(std::ostream &ostr, CBotContext& context)
     auto pClass = m_type.GetClass();
     if (pClass != nullptr && pClass->IsIntrinsic())
     {
-        if (!WriteInt(ostr, /*isExisting*/ 0)) return false;
-        if (!WriteInt(ostr, /*id*/ 0)) return false;
+        if (!WriteInt(ostr, 0)) return false; // save the object
     }
     else
     {
         int id = context.FindInstance(this);
         if (id == -1)
         {
-            if (!WriteInt(ostr, /*isExisting*/ 0)) return false;
-            id = context.DeclareInstance(this);
-            if (!WriteInt(ostr, id)) return false;
+            if (!WriteInt(ostr, 0)) return false; // save the object
+            context.DeclareInstance(this); // create unique 'id' before saving fields
         }
         else // save only the id of the already saved instance
         {
-            if (!WriteInt(ostr, /*isExisting*/ 1)) return false;
-            return WriteInt(ostr, id);
+            return WriteInt(ostr, id); // save the reference
         }
     }
 

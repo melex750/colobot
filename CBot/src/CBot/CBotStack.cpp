@@ -901,45 +901,56 @@ bool CBotVar::RestoreVar(std::istream &istr, CBotVarUPtr& outVar, CBotContext& c
             isClass = true;
         case CBotTypArrayBody:
             {
-                int isExisting;
-                if (!ReadInt(istr, isExisting)) return false;
-                if (isExisting != 0)
+                int id;
+                if (!ReadInt(istr, id)) return false;
+                if (id != 0) // found a reference to an existing object
                 {
-                    int id;
-                    if (!ReadInt(istr, id)) return false;
                     CBotVar* pInstance = context.FindInstance(id);
                     if (pInstance == nullptr)
                     {
                         assert(false);
                         return false;
                     }
-                    pNew = pInstance;
+                    if (!isClass)
+                        pNew = CBotVar::Create("", {CBotTypArrayPointer, pInstance->GetTypResult().GetTypElem()});
+                    else
+                        pNew = CBotVar::Create("", CBotTypNullPointer, nullptr);
+
+                    pNew->SetPointer( pInstance->GetPointer() ); // get shared ptr
                     break;
                 }
 
-                int id;
-                if (!ReadInt(istr, id)) return false;
+                // found the original object
                 CBotTypResult    r;
                 if (!ReadType(istr, r, context)) return false;      // complete type
 
-                pNew = new CBotVarClass(token, r);                // directly creates an instance
+                // create a new object or pointer to a new instance
+                CBotVarUPtr newObject{ CBotVar::Create(token, r) };
+
+                CBotVarClass* newInstance;
                 auto pClass = r.GetClass();
-                if (pClass == nullptr || !pClass->IsIntrinsic())
+                if (isClass && pClass->IsIntrinsic()) // is pass-by-copy object like 'point'
                 {
-                    context.DeclareInstance(id, pNew);
+                    newInstance = static_cast<CBotVarClass*>(newObject.get());
+                }
+                else  // (is pointer) to new array or new class instance
+                {
+                    newInstance = static_cast<CBotVarClass*>(newObject->GetPointer().get());
+                    context.DeclareInstance(newInstance); // restore unique 'id' before reading saved fields
                 }
 
-                if (!ReadVarListFromArray(istr, (static_cast<CBotVarClass*>(pNew))->m_pVar, context)) return false;
+                if (!ReadVarListFromArray(istr, newInstance->m_pVar, context)) return false;
 
                 if (isClass) // read id for each item in this instance
                 {
-                    CBotVar* pVars = (static_cast<CBotVarClass*>(pNew))->m_pVar;
+                    CBotVar* pVars = newInstance->m_pVar;
                     while (pVars != nullptr)
                     {
                         if (!ReadLong(istr, pVars->m_ident)) return false;
                         pVars = pVars->m_next;
                     }
                 }
+                pNew = newObject.release();
             }
             break;
 
@@ -953,13 +964,13 @@ bool CBotVar::RestoreVar(std::istream &istr, CBotVarUPtr& outVar, CBotContext& c
                 CBotTypResult ptrType(w, pClass);
                 pNew = CBotVar::Create(token, ptrType);        // creates a variable
 
-                // returns the original instance
-                CBotVar* pInstance = nullptr;
-                if (!ReadVarListFromArray(istr, pInstance, context)) return false;
+                // expecting nullptr or pointer with ownership of the instance
+                CBotVarUPtr temp;
+                if (!RestoreVar(istr, temp, context)) return false;
 
-                if (pInstance != nullptr)
+                if (temp)
                 {
-                    pNew->SetPointer( pInstance->GetPointer() );            // and point over
+                    pNew->SetPointer( temp->GetPointer() ); // get shared ptr
                 }
 
                 if (bConstructor) pNew->ConstructorSet(); // constructor was called
@@ -974,13 +985,13 @@ bool CBotVar::RestoreVar(std::istream &istr, CBotVarUPtr& outVar, CBotContext& c
 
                 pNew = CBotVar::Create(token, r);                        // creates a variable
 
-                // returns the original instance
-                CBotVar* pInstance = nullptr;
-                if (!ReadVarListFromArray(istr, pInstance, context)) return false;
+                // expecting nullptr or pointer with ownership of the instance
+                CBotVarUPtr temp;
+                if (!RestoreVar(istr, temp, context)) return false;
 
-                if (pInstance != nullptr)
+                if (temp)
                 {
-                    pNew->SetPointer( pInstance->GetPointer() );            // and point over
+                    pNew->SetPointer( temp->GetPointer() ); // get shared ptr
                 }
             }
             break;
