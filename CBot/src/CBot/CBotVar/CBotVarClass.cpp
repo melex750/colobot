@@ -440,20 +440,22 @@ bool CBotVarClass::Save1State(std::ostream &ostr, CBotContext& context)
     auto pClass = m_type.GetClass();
     if (pClass != nullptr && pClass->IsIntrinsic())
     {
-        if (!WriteLong(ostr, 0)) return false;
+        if (!WriteInt(ostr, /*isExisting*/ 0)) return false;
+        if (!WriteInt(ostr, /*id*/ 0)) return false;
     }
     else
     {
-        auto pos = context.FindInstance(this);
-        if (pos == -1)
+        int id = context.FindInstance(this);
+        if (id == -1)
         {
-            // 0 to mark the instance as saved at this position
-            if (!WriteLong(ostr, 0)) return false;
-            context.DeclareInstance(ostr.tellp(), this);
+            if (!WriteInt(ostr, /*isExisting*/ 0)) return false;
+            id = context.DeclareInstance(this);
+            if (!WriteInt(ostr, id)) return false;
         }
-        else // save only the stream position of the already saved instance
+        else // save only the id of the already saved instance
         {
-            return WriteLong(ostr, pos);
+            if (!WriteInt(ostr, /*isExisting*/ 1)) return false;
+            return WriteInt(ostr, id);
         }
     }
 

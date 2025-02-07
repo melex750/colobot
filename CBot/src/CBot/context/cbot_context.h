@@ -80,10 +80,11 @@ public:
 
     static bool ReadStaticState(std::istream& istr, CBotContext& context);
 
-    long FindInstance(CBotVar* var) const;
-    CBotVar* FindInstance(long pos) const;
+    int FindInstance(CBotVar* var) const;
+    CBotVar* FindInstance(int id) const;
     void ClearInstanceList();
-    void DeclareInstance(long pos, CBotVar* var);
+    int DeclareInstance(CBotVar* var);
+    void DeclareInstance(int id, CBotVar* var);
 
     bool IsDefinedConstant(const std::string& name) const override;
 
@@ -108,7 +109,8 @@ private:
     {
         long m_nextUniqueID = 10000;
         CBotFileAccessHandlerUPtr m_fileHandler;
-        std::unordered_map<long, CBotVar*> m_instances;
+        std::unordered_map<int, CBotVar*> m_instances;
+        int m_next = 1;
     };
     std::shared_ptr<CBotContext::GlobalData> m_globalData;
 
