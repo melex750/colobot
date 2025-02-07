@@ -117,7 +117,7 @@ bool CBotContext::WriteStaticState(std::ostream& ostr) const
     return true;
 }
 
-bool CBotContext::ReadStaticState(std::istream& istr, CBotContext& context)
+bool CBotContext::ReadStaticState(std::istream& istr)
 {
     unsigned short w;
     while (true)
@@ -132,9 +132,9 @@ bool CBotContext::ReadStaticState(std::istream& istr, CBotContext& context)
         std::string className;
         if (!ReadString(istr, className)) return false;
         CBotClass* pClass = nullptr;
-        auto it = context.m_classList.find(className);
-        pClass = it != context.m_classList.end() ? it->second.get() : nullptr;
-        if (!CBotClass::RestoreStaticVars(istr, pClass, context)) return false;
+        auto it = m_classList.find(className);
+        pClass = it != m_classList.end() ? it->second.get() : nullptr;
+        if (!CBotClass::RestoreStaticVars(istr, pClass, *this)) return false;
     }
     if (!ReadWord(istr, w)) return false;
     if (w != 0) return false; // currently unused flag should read 0

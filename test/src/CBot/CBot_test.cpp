@@ -218,7 +218,7 @@ private:
         if (!program->RestoreState(sstr))
             throw CBotTestFail("CBotProgram::RestoreState Failed");
 
-        if (!CBotContext::ReadStaticState(sstr, *context))
+        if (!context->ReadStaticState(sstr))
             throw CBotTestFail("CBotContext::ReadStaticState Failed");
     }
 
