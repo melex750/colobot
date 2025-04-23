@@ -410,7 +410,7 @@ bool ReadVarListFromArray(std::istream &istr, CBotVar*& pVar, CBotContext& conte
     CBotVarUPtr outVar{nullptr};
 
     if (!ReadSize_t(istr, numVar)) return false;
-    while (numVar != 0 && 0 < numVar--)
+    for(; numVar != 0; --numVar)
     {
         CBotVarUPtr pNew{nullptr};
         if (!CBotVar::RestoreVar(istr, pNew, context)) return false;
@@ -456,7 +456,7 @@ bool ReadVarArray(std::istream &istr, std::vector<CBotVarUPtr>& vars, CBotContex
     if (!ReadSize_t(istr, numVar)) return false;
     vars.resize(numVar);
     auto it = vars.begin();
-    while (numVar != 0 && 0 < numVar--)
+    for(; numVar != 0; --numVar)
     {
         if (!CBotVar::RestoreVar(istr, *it, context)) return false;
         if (*it == nullptr) // no empty pointers, unexpected 0 terminator
