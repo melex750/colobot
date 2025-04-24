@@ -301,6 +301,17 @@ bool CScriptFunctions::rSetResearchDone(CBotVar* var, CBotVar* result, int& exce
     return true;
 }
 
+CBotTypResult CScriptFunctions::GetClassTypResult(const char* name, void* user)
+{
+    assert(user != nullptr);
+    assert(name != nullptr);
+    auto script = static_cast<CScript*>(user);
+    auto& context = script->m_main->GetCBotContextGlobal();
+    auto pClass = context->FindClass(name);
+    assert(pClass != nullptr);
+    return CBotTypResult(pClass->IsIntrinsic() ? CBotTypIntrinsic : CBotTypPointer, pClass);
+}
+
 // Compilation of the instruction "retobject(rank)".
 
 CBotTypResult CScriptFunctions::cGetObject(CBotVar* &var, void* user)
@@ -309,12 +320,7 @@ CBotTypResult CScriptFunctions::cGetObject(CBotVar* &var, void* user)
     if ( var->GetType() > CBotTypDouble )  return CBotTypResult(CBotErrBadNum);
     var = var->GetNext();
     if ( var != nullptr )  return CBotTypResult(CBotErrOverParam);
-
-    auto script = static_cast<CScript*>(user);
-    auto& context = script->m_main->GetCBotContextGlobal();
-    auto pClass = context->FindClass("object");
-
-    return CBotTypResult(CBotTypPointer, pClass);
+    return GetClassTypResult("object", user);
 }
 
 // Instruction "retobjectbyid(rank)".
@@ -820,20 +826,12 @@ static CBotTypResult compileSearch(CBotVar* &var, void* user, CBotTypResult retu
 
 CBotTypResult CScriptFunctions::cSearch(CBotVar* &var, void* user)
 {
-    auto script = static_cast<CScript*>(user);
-    auto& context = script->m_main->GetCBotContextGlobal();
-    auto pClass = context->FindClass("object");
-
-    return compileSearch(var, user, CBotTypResult(CBotTypPointer, pClass));
+    return compileSearch(var, user, GetClassTypResult("object", user));
 }
 
 CBotTypResult CScriptFunctions::cSearchAll(CBotVar* &var, void* user)
 {
-    auto script = static_cast<CScript*>(user);
-    auto& context = script->m_main->GetCBotContextGlobal();
-    auto pClass = context->FindClass("object");
-
-    return compileSearch(var, user, CBotTypResult(CBotTypArrayPointer, CBotTypResult(CBotTypPointer, pClass)));
+    return compileSearch(var, user, CBotTypResult(CBotTypArrayPointer, GetClassTypResult("object", user)));
 }
 
 static bool runSearch(CBotVar* var, glm::vec3 pos, int& exception, std::function<bool(std::vector<ObjectType>, glm::vec3, float, float, bool, RadarFilter)> code)
@@ -1007,22 +1005,14 @@ static CBotTypResult compileRadar(CBotVar* &var, void* user, CBotTypResult retur
 
 CBotTypResult CScriptFunctions::cRadarAll(CBotVar* &var, void* user)
 {
-    auto script = static_cast<CScript*>(user);
-    auto& context = script->m_main->GetCBotContextGlobal();
-    auto pClass = context->FindClass("object");
-
-    return compileRadar(var, user, CBotTypResult(CBotTypArrayPointer, CBotTypResult(CBotTypPointer, pClass)));
+    return compileRadar(var, user, CBotTypResult(CBotTypArrayPointer, GetClassTypResult("object", user)));
 }
 
 // Compilation of instruction "radar(type, angle, focus, min, max, sens)".
 
 CBotTypResult CScriptFunctions::cRadar(CBotVar* &var, void* user)
 {
-    auto script = static_cast<CScript*>(user);
-    auto& context = script->m_main->GetCBotContextGlobal();
-    auto pClass = context->FindClass("object");
-
-    return compileRadar(var, user, CBotTypResult(CBotTypPointer, pClass));
+    return compileRadar(var, user, GetClassTypResult("object", user));
 }
 
 static bool runRadar(CBotVar* var, std::function<bool(std::vector<ObjectType>, float, float, float, float, bool, RadarFilter)> code)
@@ -1839,12 +1829,7 @@ CBotTypResult CScriptFunctions::cSpace(CBotVar* &var, void* user)
             }
         }
     }
-
-    auto script = static_cast<CScript*>(user);
-    auto& context = script->m_main->GetCBotContextGlobal();
-    auto pClass = context->FindClass("point");
-
-    return CBotTypResult(CBotTypIntrinsic, pClass);
+    return GetClassTypResult("point", user);
 }
 
 // Instruction "space(center, rMin, rMax, dist)".
@@ -1948,11 +1933,7 @@ CBotTypResult CScriptFunctions::cFlatSpace(CBotVar* &var, void* user)
         }
     }
 
-    auto script = static_cast<CScript*>(user);
-    auto& context = script->m_main->GetCBotContextGlobal();
-    auto pClass = context->FindClass("point");
-
-    return CBotTypResult(CBotTypIntrinsic, pClass);
+    return GetClassTypResult("point", user);
 }
 
 bool CScriptFunctions::rFlatSpace(CBotVar* var, CBotVar* result, int& exception, void* user)

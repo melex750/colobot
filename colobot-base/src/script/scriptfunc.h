@@ -164,4 +164,6 @@ private:
     static bool     WaitForBackgroundTask(CScript* script, CBot::CBotVar* result, int &exception);
     static bool     ShouldTaskStop(Error err, int errMode);
     static CExchangePost* FindExchangePost(CObject* object, float power);
+
+    static CBot::CBotTypResult GetClassTypResult(const char* name, void* user);
 };
