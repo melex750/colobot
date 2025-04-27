@@ -80,8 +80,7 @@ void CBotVarClass::ConstructorSet()
 void CBotVarClass::Copy(CBotVar* pSrc, bool bName)
 {
     auto srcType = pSrc->GetType();
-    if ( srcType != CBotTypClass && srcType != CBotTypIntrinsic)
-        assert(0);
+    assert(srcType == CBotTypClass || srcType == CBotTypIntrinsic);
 
     CBotVarClass*    p = static_cast<CBotVarClass*>(pSrc);
 
