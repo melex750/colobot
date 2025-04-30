@@ -118,23 +118,19 @@ void CBotVarPointer::SetPointer(const CBotVarSPtr& pVarClass)
 {
     m_binit = CBotVar::InitType::DEF;                            // init, even on a null pointer
 
-    if ( m_pVarClass == pVarClass) return;    // special, not decrement and reincrement
-                                            // because the decrement can destroy the object
-
     if ( !pVarClass )
     {
         m_pVarClass.reset();
     }
     else
     {
-        auto instance = pVarClass; // the real pointer to the object
-        if (instance)
+        if (pVarClass)
         {
-            if (!instance->m_type.Eq(CBotTypClass)) assert(0);
-            m_pClass = (std::static_pointer_cast<CBotVarClass>(instance))->m_pClass;
+            assert(pVarClass->m_type.Eq(CBotTypClass));
+            m_pClass = (std::static_pointer_cast<CBotVarClass>(pVarClass))->m_pClass;
             m_type = CBotTypResult(CBotTypPointer, m_pClass);    // what kind of a pointer
         }
-        m_pVarClass = instance;
+        m_pVarClass = pVarClass;
     }
 }
 
