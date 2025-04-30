@@ -27,7 +27,11 @@ namespace CBot
 class CBotListConstantInterface
 {
 protected:
-    ~CBotListConstantInterface() {}
+    CBotListConstantInterface() {};
+    ~CBotListConstantInterface() {};
+
+    CBotListConstantInterface(const CBotListConstantInterface&) = delete;
+    CBotListConstantInterface& operator= (const CBotListConstantInterface&) = delete;
 
 public:
     template<typename T>
