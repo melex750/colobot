@@ -497,12 +497,4 @@ private:
     bool m_callFinished;
 };
 
-struct CBotStackDeleter
-{
-    void operator()(CBotStack* p)
-    {
-        if (p != nullptr) p->Delete();
-    }
-};
-
 } // namespace CBot
