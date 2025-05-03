@@ -20,6 +20,7 @@
 #pragma once
 
 #include <memory>
+#include <cassert>
 
 namespace CBot
 {
@@ -31,7 +32,10 @@ using CBotContextSPtr = std::shared_ptr<CBot::CBotContext>;
 class CBotContextOwner
 {
 protected:
-    CBotContextOwner(const CBotContextSPtr& context) : m_context(context) {}
+    CBotContextOwner(const CBotContextSPtr& context) : m_context(context)
+    {
+        assert(context != nullptr);
+    }
     ~CBotContextOwner() {}
 
 public:

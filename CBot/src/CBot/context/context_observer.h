@@ -31,7 +31,11 @@ using CBotContextSPtr = std::shared_ptr<CBot::CBotContext>;
 class CBotContextObserver
 {
 protected:
-    CBotContextObserver(const CBotContextSPtr& context) : m_context(context) {}
+    CBotContextObserver(const CBotContextSPtr& context) : m_context(context)
+    {
+        assert(context != nullptr);
+    }
+
     ~CBotContextObserver() {}
 
 public:
