@@ -4895,7 +4895,7 @@ CObject* CRobotMain::IOReadScene(const std::filesystem::path& filename,
 
                     if (objVar)
                     {
-                        objVar->SetUserPointer(CBot::CBotUserPointer::Create(obj));
+                        objVar->SetUserPointer(obj);
                         obj->GetBotVar()->SetPointer(objVar->GetPointer());
                     }
 

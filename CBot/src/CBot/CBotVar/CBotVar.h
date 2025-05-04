@@ -23,6 +23,7 @@
 #include "CBot/CBotTypResult.h"
 #include "CBot/CBotEnums.h"
 #include "CBot/CBotUtils.h"
+#include "CBot/user_pointer.h"
 
 #include <cstdint>
 #include <memory>
@@ -35,7 +36,6 @@ class CBotClass;
 class CBotContext;
 class CBotInstr;
 class CBotToken;
-class CBotUserPointer;
 class CBotVar;
 class CBotVarClass;
 
@@ -149,13 +149,17 @@ public:
      * \brief Set a custom pointer associated with this variable
      * \param user custom pointer to set
      */
-    virtual void SetUserPointer(std::unique_ptr<CBotUserPointer> user);
+    virtual void SetUserPointer(void* user);
 
     /**
-     * \brief Returns the custom pointer associated with this variable
-     * \return A pointer set with SetUserPointer()
+     * \brief Set user pointer as dead
      */
-    virtual const std::unique_ptr<CBotUserPointer>& GetUserPointer();
+    virtual void KillUserPointer();
+
+    /**
+     * \brief Return the custom pointer associated with this variable
+     */
+    virtual CBotVarUserPointer GetUserPointer();
 
     //@}
 

@@ -55,8 +55,9 @@ public:
     bool Save1State(std::ostream &ostr, CBotContext& context) override;
 
     void Update() override;
-    void SetUserPointer(std::unique_ptr<CBotUserPointer> user) override;
-    const std::unique_ptr<CBotUserPointer>& GetUserPointer() override;
+    void SetUserPointer(void* user) override;
+    void KillUserPointer() override;
+    CBotVarUserPointer GetUserPointer() override;
 
     CBotVarSPtr GetPointer() override;
 
@@ -78,7 +79,7 @@ private:
     //! Set after constructor is called, allows destructor to be called
     bool m_bConstructor;
 
-    std::unique_ptr<CBotUserPointer> m_userPtr;
+    CBotVarUserPointer m_userPtr;
 
     friend class CBotVar;
     friend class CBotVarPointer;

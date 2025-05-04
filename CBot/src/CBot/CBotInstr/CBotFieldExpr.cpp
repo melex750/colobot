@@ -25,8 +25,6 @@
 
 #include "CBot/CBotVar/CBotVarClass.h"
 
-#include "CBot/context/cbot_user_pointer.h"
-
 #include <cassert>
 #include <sstream>
 
@@ -88,13 +86,10 @@ bool CBotFieldExpr::ExecuteVar(CBotVar* &pVar, CBotStack* &pile, CBotToken* prev
             return pj->Return(pile);
         }
 
-        if (const auto& userPtr = pItem->GetUserPointer())
+        if (pItem->GetUserPointer().GetState() == PtrState::Dead)
         {
-            if (userPtr->GetPointerAs<void>() == nullptr)
-            {
-                pile->SetError(CBotErrDeletedPtr, prevToken);
-                return pj->Return(pile);
-            }
+            pile->SetError(CBotErrDeletedPtr, prevToken);
+            return pj->Return(pile);
         }
     }
 

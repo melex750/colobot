@@ -376,7 +376,7 @@ bool CScriptFunctions::rIsBusy(CBotVar* var, CBotVar* result, int& exception, vo
 
     exception = 0;
 
-    CObject* obj = var->GetUserPointer()->GetPointerAs<CObject>();
+    CObject* obj = var->GetUserPointer().GetPointerAs<CObject>();
     if (obj == nullptr)
     {
         exception = ERR_WRONG_OBJ;
@@ -413,7 +413,7 @@ bool CScriptFunctions::rDestroy(CBotVar* var, CBotVar* result, int& exception, v
     if (var == nullptr)
         obj = CObjectManager::GetInstancePointer()->FindNearest(pThis, OBJECT_DESTROYER);
     else
-        obj = var->GetUserPointer()->GetPointerAs<CObject>();
+        obj = var->GetUserPointer().GetPointerAs<CObject>();
 
     if (obj == nullptr)
     {
@@ -498,7 +498,7 @@ bool CScriptFunctions::rFactory(CBotVar* var, CBotVar* result, int& exception, v
     if (var == nullptr)
         factory = CObjectManager::GetInstancePointer()->FindNearest(pThis, OBJECT_FACTORY);
     else
-        factory = var->GetUserPointer()->GetPointerAs<CObject>();
+        factory = var->GetUserPointer().GetPointerAs<CObject>();
 
     if (factory == nullptr)
     {
@@ -588,7 +588,7 @@ bool CScriptFunctions::rResearch(CBotVar* var, CBotVar* result, int& exception, 
     if (var == nullptr)
         center = CObjectManager::GetInstancePointer()->FindNearest(pThis, OBJECT_RESEARCH);
     else
-        center = var->GetUserPointer()->GetPointerAs<CObject>();
+        center = var->GetUserPointer().GetPointerAs<CObject>();
 
     if (center == nullptr)
     {
@@ -673,7 +673,7 @@ bool CScriptFunctions::rTakeOff(CBotVar* var, CBotVar* result, int& exception, v
     if (var == nullptr)
         base = CObjectManager::GetInstancePointer()->FindNearest(pThis, OBJECT_BASE);
     else
-        base = var->GetUserPointer()->GetPointerAs<CObject>();
+        base = var->GetUserPointer().GetPointerAs<CObject>();
 
     if (base == nullptr)
     {
@@ -3298,7 +3298,7 @@ bool CScriptFunctions::rCameraFocus(CBotVar* var, CBotVar* result, int& exceptio
     }
     else
     {
-        object = var->GetUserPointer()->GetPointerAs<CObject>();
+        object = var->GetUserPointer().GetPointerAs<CObject>();
         var = var->GetNext();
     }
     if (var != nullptr)
@@ -3848,18 +3848,14 @@ CBotVar* CScriptFunctions::CreateObjectVar(CObject* obj)
     pClass->SetUpdateFunc(CScriptFunctions::uObject);
 
     CBotVar* botVar = CBotVar::Create("", CBotTypResult(CBotTypClass, pClass));
-    botVar->SetUserPointer(CBotUserPointer::Create(obj));
+    botVar->SetUserPointer(obj);
     return botVar;
 }
 
 void CScriptFunctions::DestroyObjectVar(CBotVar* botVar, bool permanent)
 {
     if ( botVar == nullptr ) return;
-
-    if (const auto& user = botVar->GetUserPointer())
-    {
-        user->SetPointerAs(nullptr);
-    }
+    botVar->KillUserPointer();
     if (permanent)
         CBotVar::Destroy(botVar);
 }

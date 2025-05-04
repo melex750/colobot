@@ -1,6 +1,6 @@
 /*
  * This file is part of the Colobot: Gold Edition source code
- * Copyright (C) 2001-2023, Daniel Roux, EPSITEC SA & TerranovaTeam
+ * Copyright (C) 2025, Daniel Roux, EPSITEC SA & TerranovaTeam
  * http://epsitec.ch; http://colobot.info; http://github.com/colobot
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,38 +17,28 @@
  * along with this program. If not, see http://gnu.org/licenses
  */
 
-#pragma once
-
-
-#include <memory>
+#include <cassert>
+#include "CBot/user_pointer.h"
 
 namespace CBot
 {
 
-class CBotUserPointer
+PtrState CBotVarUserPointer::GetState() const
 {
-public:
+    return m_state;
+}
 
-    CBotUserPointer() : m_userPtr(nullptr) {}
-    CBotUserPointer(void* user) :  m_userPtr(user) {}
+void CBotVarUserPointer::Set(void* p)
+{
+    assert(p != nullptr);
+    m_p = p;
+    m_state = PtrState::Alive;
+}
 
-    static std::unique_ptr<CBotUserPointer> Create()
-    {
-        return std::make_unique<CBotUserPointer>();
-    }
-
-    static std::unique_ptr<CBotUserPointer> Create(void* user)
-    {
-        return std::make_unique<CBotUserPointer>(user);
-    }
-
-    void SetPointerAs(void* user) { m_userPtr = user; }
-
-    template<typename T>
-    T* GetPointerAs() { return static_cast<T*>(m_userPtr); }
-
-private:
-    void* m_userPtr;
-};
+void CBotVarUserPointer::Kill()
+{
+    m_p = nullptr;
+    m_state = PtrState::Dead;
+}
 
 } // namespace CBot

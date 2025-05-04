@@ -167,7 +167,6 @@ target_sources(CBot PRIVATE
     src/CBot/CBotVar/CBotVarString.h
     src/CBot/context/cbot_context.cpp
     src/CBot/context/cbot_context.h
-    src/CBot/context/cbot_user_pointer.h
     src/CBot/context/context_observer.h
     src/CBot/context/context_owner.h
     src/CBot/context/external_call_list_interface.h
@@ -181,6 +180,8 @@ target_sources(CBot PRIVATE
     src/CBot/stdlib/StringFunctions.cpp
     src/CBot/stdlib/stdlib.h
     src/CBot/stdlib/stdlib_public.h
+    src/CBot/user_pointer.cpp
+    src/CBot/user_pointer.h
 )
 
 target_include_directories(CBot PUBLIC src)

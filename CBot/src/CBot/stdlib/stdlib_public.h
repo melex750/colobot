@@ -21,8 +21,6 @@
 
 #include "CBot/stdlib/Compilation.h"
 
-#include "CBot/context/cbot_user_pointer.h"
-
 #include <filesystem>
 #include <memory>
 #include <unordered_map>

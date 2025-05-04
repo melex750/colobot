@@ -31,7 +31,6 @@
 #include "CBot/CBotProgram.h"
 
 #include "CBot/context/cbot_context.h"
-#include "CBot/context/cbot_user_pointer.h"
 
 #include <cassert>
 #include <cstdint>

@@ -25,8 +25,6 @@
 #include "CBot/CBotEnums.h"
 #include "CBot/CBotUtils.h"
 
-#include "CBot/context/cbot_user_pointer.h"
-
 #include <cassert>
 
 namespace CBot
@@ -63,15 +61,20 @@ void CBotVarPointer::Update()
     if (m_pVarClass) m_pVarClass->Update();
 }
 
-void CBotVarPointer::SetUserPointer(std::unique_ptr<CBotUserPointer> user)
+void CBotVarPointer::SetUserPointer(void* user)
 {
-    if (m_pVarClass) m_pVarClass->SetUserPointer(std::move(user));
+    if (m_pVarClass) m_pVarClass->SetUserPointer(user);
 }
 
-const std::unique_ptr<CBotUserPointer>& CBotVarPointer::GetUserPointer()
+void CBotVarPointer::KillUserPointer()
+{
+    if (m_pVarClass) m_pVarClass->KillUserPointer();
+}
+
+CBotVarUserPointer CBotVarPointer::GetUserPointer()
 {
     if (m_pVarClass) return m_pVarClass->GetUserPointer();
-    return CBotVar::GetUserPointer();
+    return {};
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -212,45 +215,15 @@ bool CBotVarPointer::Eq(CBotVar* left, CBotVar* right)
     auto r = right->GetPointer();
 
     if ( l == r ) return true;
-    if ( l == nullptr )
-    {
-        if (const auto& rUser = r->GetUserPointer())
-        {
-            if (rUser->GetPointerAs<void>() == nullptr) return true;
-        }
-    }
-    if ( r == nullptr )
-    {
-        if (const auto& lUser = l->GetUserPointer())
-        {
-            if (lUser->GetPointerAs<void>() == nullptr) return true;
-        }
-    }
+    if ( l == nullptr && r->GetUserPointer().GetState() == PtrState::Dead) return true;
+    if ( r == nullptr && l->GetUserPointer().GetState() == PtrState::Dead) return true;
     return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool CBotVarPointer::Ne(CBotVar* left, CBotVar* right)
 {
-    auto l = left->GetPointer();
-    auto r = right->GetPointer();
-
-    if ( l == r ) return false;
-    if ( l == nullptr )
-    {
-        if (const auto& rUser = r->GetUserPointer())
-        {
-            if (rUser->GetPointerAs<void>() == nullptr) return false;
-        }
-    }
-    if ( r == nullptr )
-    {
-        if (const auto& lUser = l->GetUserPointer())
-        {
-            if (lUser->GetPointerAs<void>() == nullptr) return false;
-        }
-    }
-    return true;
+    return !Eq(left, right);
 }
 
 } // namespace CBot

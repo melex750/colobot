@@ -26,7 +26,6 @@
 #include "CBot/CBotInstr/CBotInstr.h"
 
 #include "CBot/context/cbot_context.h"
-#include "CBot/context/cbot_user_pointer.h"
 
 #include <cassert>
 
@@ -195,24 +194,23 @@ CBotClass* CBotVarClass::GetClass()
 
 void CBotVarClass::Update()
 {
-    if (!m_userPtr) return;
-
-    void* user = m_userPtr->GetPointerAs<void>();
-
-    if (user == nullptr) return;
-
+    if (m_userPtr.GetState() != PtrState::Alive) return;
+    void* user = m_userPtr.GetPointerAs<void>();
     m_pClass->Update(this, user);
 }
 
-void CBotVarClass::SetUserPointer(std::unique_ptr<CBotUserPointer> user)
+void CBotVarClass::SetUserPointer(void* user)
 {
-    if (m_userPtr)
-        assert(false);
-    else
-        m_userPtr = std::move(user);
+    assert(m_userPtr.GetState() == PtrState::UnInit);
+    m_userPtr.Set(user);
 }
 
-const std::unique_ptr<CBotUserPointer>& CBotVarClass::GetUserPointer()
+void CBotVarClass::KillUserPointer()
+{
+    m_userPtr.Kill();
+}
+
+CBotVarUserPointer CBotVarClass::GetUserPointer()
 {
     return m_userPtr;
 }

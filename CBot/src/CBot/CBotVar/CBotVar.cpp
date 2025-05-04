@@ -41,8 +41,6 @@
 
 #include "CBot/CBotEnums.h"
 
-#include "CBot/context/cbot_user_pointer.h"
-
 #include <cassert>
 #include <cmath>
 #include <cstdio>
@@ -98,14 +96,17 @@ void CBotVar::Update()
 {
 }
 
-void CBotVar::SetUserPointer(std::unique_ptr<CBotUserPointer> user)
+void CBotVar::SetUserPointer(void* user)
 {
 }
 
-const std::unique_ptr<CBotUserPointer>& CBotVar::GetUserPointer()
+void CBotVar::KillUserPointer()
 {
-    const static std::unique_ptr<CBotUserPointer> emptyPtr{nullptr};
-    return emptyPtr;
+}
+
+CBotVarUserPointer CBotVar::GetUserPointer()
+{
+    return {};
 }
 
 void CBotVar::SetUniqNum(long n)

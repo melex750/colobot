@@ -58,8 +58,9 @@ public:
     bool Save1State(std::ostream &ostr, CBotContext& context) override;
 
     void Update() override;
-    void SetUserPointer(std::unique_ptr<CBotUserPointer> user) override;
-    const std::unique_ptr<CBotUserPointer>& GetUserPointer() override;
+    void SetUserPointer(void* user) override;
+    void KillUserPointer() override;
+    CBotVarUserPointer GetUserPointer() override;
 
     bool Eq(CBotVar* left, CBotVar* right) override;
     bool Ne(CBotVar* left, CBotVar* right) override;
