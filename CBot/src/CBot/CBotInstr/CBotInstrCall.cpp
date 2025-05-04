@@ -210,7 +210,7 @@ void CBotInstrCall::RestoreState(CBotStack* &pj, bool bMain)
     CBotStack* pile2 = pile->RestoreStack();
     if ( pile2 == nullptr ) return;
 
-    pile2->RestoreCall(m_nFuncIdent, GetToken(), ppVars);
+    pile2->RestoreCall(m_nFuncIdent, &GetToken(), ppVars);
 }
 
 std::string CBotInstrCall::GetDebugData()

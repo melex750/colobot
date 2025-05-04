@@ -379,7 +379,7 @@ void CBotVarClass::CallDestructor()
 
             CBotToken token(nom); // TODO
 
-            while ( pile->IsOk() && !m_pClass->ExecuteMethode(ident, pThis, ppVars, CBotTypResult(CBotTypVoid), pile, &token)) ;    // waits for the end
+            while ( pile->IsOk() && !m_pClass->ExecuteMethode(ident, pThis, ppVars, CBotTypResult(CBotTypVoid), pile, token)) ;    // waits for the end
 
             pile->Delete();
             delete pThis;

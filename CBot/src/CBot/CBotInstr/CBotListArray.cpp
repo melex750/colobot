@@ -182,7 +182,7 @@ bool CBotListArray::Execute(CBotStack* &pj, CBotVar* pVar)
 
         if (pVar2 == nullptr)
         {
-            pj->SetError(CBotErrOutArray, p->GetToken());
+            pj->SetError(CBotErrOutArray, &p->GetToken());
             return false;
         }
         CBotTypResult type = pVar2->GetTypResult();

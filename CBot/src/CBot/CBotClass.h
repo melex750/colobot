@@ -248,7 +248,7 @@ public:
      * \return
      */
     bool ExecuteMethode(long &nIdent, CBotVar* pThis, CBotVar** ppParams, CBotTypResult pResultType,
-                        CBotStack*&pStack, CBotToken* pToken);
+                        CBotStack*&pStack, CBotToken& token);
 
     /*!
      * \brief RestoreMethode Restored the execution stack.

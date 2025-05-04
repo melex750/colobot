@@ -265,7 +265,7 @@ bool CBotExpression::Execute(CBotStack* &pj)
             assert(0);
         }
         if (initKind == CBotVar::InitType::UNDEF)
-            pile2->SetError(CBotErrNotInit, m_leftop->GetToken());
+            pile2->SetError(CBotErrNotInit, &m_leftop->GetToken());
 
         pile1->IncState();
     }

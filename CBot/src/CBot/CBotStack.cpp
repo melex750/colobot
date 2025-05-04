@@ -596,13 +596,13 @@ void CBotStack::SetUserPtr(void* user)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool CBotStack::ExecuteCall(long& nIdent, CBotToken* token, CBotVar** ppVar, const CBotTypResult& rettype)
+bool CBotStack::ExecuteCall(long& nIdent, CBotToken& token, CBotVar** ppVar, const CBotTypResult& rettype)
 {
     int res;
 
     // first looks by the identifier
 
-    res = CBotFunction::DoCall(m_prog, m_prog->GetFunctions(), nIdent, "", ppVar, this, token);
+    res = CBotFunction::DoCall(m_prog, m_prog->GetFunctions(), nIdent, "", ppVar, this, &token);
     if (res >= 0) return res;
 
     // if not found (recompile?) seeks by name
@@ -611,10 +611,10 @@ bool CBotStack::ExecuteCall(long& nIdent, CBotToken* token, CBotVar** ppVar, con
     res = m_data->context->DoCall(token, nullptr, ppVar, this, rettype);
     if (res >= 0) return res;
 
-    res = CBotFunction::DoCall(m_prog, m_prog->GetFunctions(), nIdent, token->GetString(), ppVar, this, token);
+    res = CBotFunction::DoCall(m_prog, m_prog->GetFunctions(), nIdent, token.GetString(), ppVar, this, &token);
     if (res >= 0) return res;
 
-    SetError(CBotErrUndefFunc, token);
+    SetError(CBotErrUndefFunc, &token);
     return true;
 }
 
@@ -654,12 +654,12 @@ void CBotStack::GetRunPos(std::string& functionName, int& start, int& end)
 
     if ( funct == nullptr ) return;
 
-    CBotToken* t = funct->GetToken();
+    CBotToken* t = &funct->GetToken();
     functionName = t->GetString();
 
 //    if ( p->m_instr != nullptr ) instr = p->m_instr;
 
-    t = instr->GetToken();
+    t = &instr->GetToken();
     start = t->GetStart();
     end   = t->GetEnd();
 }
@@ -706,7 +706,7 @@ CBotVar* CBotStack::GetStackVars(std::string& functionName, int level)
 
     if ( pp == nullptr || pp->m_instr == nullptr ) return nullptr;
 
-    CBotToken* t = pp->m_instr->GetToken();
+    CBotToken* t = &pp->m_instr->GetToken();
     functionName = t->GetString();
 
     return p->m_listVar;

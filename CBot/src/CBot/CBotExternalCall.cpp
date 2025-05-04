@@ -85,10 +85,10 @@ bool CBotExternalCallList::CheckCall(const std::string& name)
     return m_list.count(name) > 0;
 }
 
-int CBotExternalCallList::DoCall(CBotToken* token, CBotVar* thisVar, CBotVar** ppVar, CBotStack* pStack,
+int CBotExternalCallList::DoCall(CBotToken& token, CBotVar* thisVar, CBotVar** ppVar, CBotStack* pStack,
                                  const CBotTypResult& rettype)
 {
-    auto it = m_list.find(token->GetString());
+    auto it = m_list.find(token.GetString());
     if (it == m_list.end()) return -1;
 
     CBotExternalCall* pt = it->second.get();
@@ -111,7 +111,7 @@ int CBotExternalCallList::DoCall(CBotToken* token, CBotVar* thisVar, CBotVar** p
         pile->IncState(); // increment state to mark this step done
     }
 
-    pile->SetError(CBotNoErr, token); // save token for the position in case of error
+    pile->SetError(CBotNoErr, &token); // save token for the position in case of error
     return pt->Run(thisVar, pStack);
 }
 

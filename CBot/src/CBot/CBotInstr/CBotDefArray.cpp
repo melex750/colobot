@@ -188,7 +188,7 @@ bool CBotDefArray::Execute(CBotStack* &pj)
         m_typevar.SetArray(max);                                    // store the limitations
 
         // create simply a nullptr pointer
-        CBotVar*    var = CBotVar::Create(*(m_var->GetToken()), m_typevar);
+        CBotVar*    var = CBotVar::Create(m_var->GetToken(), m_typevar);
         var->SetPointer(nullptr);
         var->SetUniqNum((static_cast<CBotLeftExprVar*>(m_var))->m_nIdent);
         pj->AddVar(var);
@@ -225,7 +225,7 @@ void CBotDefArray::RestoreState(CBotStack* &pj, bool bMain)
 {
     CBotStack*    pile1 = pj;
 
-    CBotVar*    var = pj->FindVar(m_var->GetToken()->GetString());
+    CBotVar*    var = pj->FindVar(m_var->GetToken().GetString());
     if (var != nullptr) var->SetUniqNum((static_cast<CBotLeftExprVar*>(m_var))->m_nIdent);
 
     if (bMain)

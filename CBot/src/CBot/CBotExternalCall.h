@@ -187,7 +187,7 @@ public:
      * \param rettype Return type of the function, as returned by CompileCall()
      * \return -1 if call failed (no such function), 0 if function requested interruption, 1 on success
      */
-    int DoCall(CBotToken* token, CBotVar* thisVar, CBotVar** ppVars, CBotStack* pStack, const CBotTypResult& rettype);
+    int DoCall(CBotToken& token, CBotVar* thisVar, CBotVar** ppVars, CBotStack* pStack, const CBotTypResult& rettype);
 
     /**
      * \brief Restore execution status after loading saved state

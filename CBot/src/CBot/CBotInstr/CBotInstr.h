@@ -209,7 +209,7 @@ public:
      * \brief GetToken Return associated token.
      * \return
      */
-    CBotToken* GetToken();
+    CBotToken& GetToken();
 
     /**
      * \brief AddNext Adds the statement following the other.

@@ -88,7 +88,7 @@ CBotInstr* CBotSwitch::Compile(CBotToken* &p, CBotCStack* pStack)
                                 {
                                     if (inst->m_default != nullptr)
                                     {
-                                        pStk->SetError(CBotErrRedefCase, caseInst->GetToken());
+                                        pStk->SetError(CBotErrRedefCase, &caseInst->GetToken());
                                         delete inst;
                                         return pStack->Return(nullptr, pStk);
                                     }

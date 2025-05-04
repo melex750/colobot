@@ -298,17 +298,17 @@ bool CBotClass::ExecuteMethode(long& nIdent,
                                CBotVar** ppParams,
                                CBotTypResult pResultType,
                                CBotStack*& pStack,
-                               CBotToken* pToken)
+                               CBotToken& token)
 {
-    int ret = m_externalMethods->DoCall(pToken, pThis, ppParams, pStack, pResultType);
+    int ret = m_externalMethods->DoCall(token, pThis, ppParams, pStack, pResultType);
     if (ret >= 0) return ret;
 
-    ret = CBotFunction::DoCall(nIdent, pToken->GetString(), pThis, ppParams, pStack, pToken, this);
+    ret = CBotFunction::DoCall(nIdent, token.GetString(), pThis, ppParams, pStack, &token, this);
     if (ret >= 0) return ret;
 
     if (m_parent != nullptr)
     {
-        ret = m_parent->ExecuteMethode(nIdent, pThis, ppParams, pResultType, pStack, pToken);
+        ret = m_parent->ExecuteMethode(nIdent, pThis, ppParams, pResultType, pStack, token);
     }
     return ret;
 }

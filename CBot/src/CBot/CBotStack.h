@@ -415,7 +415,7 @@ public:
      * \param ppVar Array of function arguments
      * \param rettype Expected return type
      */
-    bool            ExecuteCall(long& nIdent, CBotToken* token, CBotVar** ppVar, const CBotTypResult& rettype);
+    bool            ExecuteCall(long& nIdent, CBotToken& token, CBotVar** ppVar, const CBotTypResult& rettype);
     /**
      * \brief Restore a function call after the program state has been restored from a file
      * \param[in, out] nIdent Unique function identifier, if not found will be updated
