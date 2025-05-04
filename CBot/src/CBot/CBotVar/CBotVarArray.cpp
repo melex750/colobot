@@ -73,16 +73,6 @@ void CBotVarArray::Copy(CBotVar* pSrc, bool bName)
 void CBotVarArray::SetPointer(const CBotVarSPtr& pVarClass)
 {
     m_binit = CBotVar::InitType::DEF;         // init, even on a null pointer
-
-    if ( m_pInstance == pVarClass) return;    // Special, not decrement and reincrement
-                                            // because the decrement can destroy the object
-
-    if ( pVarClass != nullptr )
-    {
-        if ( !pVarClass->m_type.Eq(CBotTypClass) &&
-             !pVarClass->m_type.Eq(CBotTypArrayBody))
-            assert(0);
-    }
     m_pInstance = pVarClass;
 }
 
